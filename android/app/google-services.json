@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "564165807972",
+    "project_id": "commad-line-cli",
+    "storage_bucket": "commad-line-cli.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:564165807972:android:71f7b68811824b817c3471",
+        "android_client_info": {
+          "package_name": "com.example.commandlinetest"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB16b8qebKWGFj7JNfkU55xMgKc6ZT4Lhs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
