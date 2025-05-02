@@ -2,7 +2,241 @@ import 'package:flutter/material.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../widgets/product_card.dart';
 import '../../models/product.dart';
-import '../../theme/app_colors.dart';
+
+IconData _getFallbackIcon(String categoryName) {
+  switch (categoryName.toLowerCase()) {
+    case 'all':
+      return Icons.apps;
+    case 'books':
+      return Icons.book;
+    case 'electronics':
+      return Icons.devices;
+    case 'furniture':
+      return Icons.chair;
+    case 'clothing':
+      return Icons.shopping_bag;
+    case 'appliances':
+      return Icons.kitchen;
+    case 'transportation':
+      return Icons.directions_car;
+    default:
+      return Icons.category;
+  }
+}
+
+class CategoryItem {
+  final String name;
+  final String imageUrl;
+  final Color gradientStart;
+  final Color gradientEnd;
+
+  const CategoryItem({
+    required this.name,
+    required this.imageUrl,
+    required this.gradientStart,
+    required this.gradientEnd,
+  });
+}
+
+final List<CategoryItem> categories = [
+  CategoryItem(
+    name: 'All',
+    imageUrl: 'https://img.icons8.com/color/96/grid-2.png',
+    gradientStart: const Color(0xFF6A11CB),
+    gradientEnd: const Color(0xFF2575FC),
+  ),
+  CategoryItem(
+    name: 'Books',
+    imageUrl: 'https://img.icons8.com/plasticine/100/books.png',
+    gradientStart: const Color(0xFF1E3C72),
+    gradientEnd: const Color(0xFF2A5298),
+  ),
+  CategoryItem(
+    name: 'Electronics',
+    imageUrl: 'https://img.icons8.com/plasticine/100/apple-watch.png',
+    gradientStart: const Color(0xFF4776E6),
+    gradientEnd: const Color(0xFF8E54E9),
+  ),
+  CategoryItem(
+    name: 'Furniture',
+    imageUrl: 'https://img.icons8.com/plasticine/100/armchair.png',
+    gradientStart: const Color(0xFFF6D365),
+    gradientEnd: const Color(0xFFFDA085),
+  ),
+  CategoryItem(
+    name: 'Clothing',
+    imageUrl: 'https://img.icons8.com/plasticine/100/mens-hoodie--v2.png',
+    gradientStart: const Color(0xFF00CDAC),
+    gradientEnd: const Color(0xFF8DDAD5),
+  ),
+  CategoryItem(
+    name: 'Appliances',
+    imageUrl: 'https://img.icons8.com/plasticine/200/microwave.png',
+    gradientStart: const Color(0xFFFF4E50),
+    gradientEnd: const Color(0xFFF9D423),
+  ),
+  CategoryItem(
+    name: 'Transportation',
+    imageUrl: 'https://img.icons8.com/plasticine/100/fiat-500--v1.png',
+    gradientStart: const Color(0xFF4568DC),
+    gradientEnd: const Color(0xFFB06AB3),
+  ),
+];
+
+class CategoryCard extends StatefulWidget {
+  final CategoryItem category;
+  final Function(String) onCategorySelected;
+
+  const CategoryCard({
+    Key? key,
+    required this.category,
+    required this.onCategorySelected,
+  }) : super(key: key);
+
+  @override
+  State<CategoryCard> createState() => _CategoryCardState();
+}
+
+class _CategoryCardState extends State<CategoryCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _rotationAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _rotationAnimation = Tween<double>(
+      begin: -0.05,
+      end: 0.05,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => widget.onCategorySelected(widget.category.name),
+      child: Column(
+        children: [
+          const SizedBox(height: 40),
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: widget.category.gradientStart.withAlpha(51),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                      spreadRadius: 1,
+                    ),
+                  ],
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      widget.category.gradientStart,
+                      widget.category.gradientEnd,
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                top: -40,
+                child: AnimatedBuilder(
+                  animation: _rotationAnimation,
+                  builder: (context, child) {
+                    return Transform(
+                      alignment: Alignment.center,
+                      transform:
+                          Matrix4.identity()
+                            ..setEntry(3, 2, 0.001)
+                            ..rotateX(-0.1)
+                            ..rotateZ(_rotationAnimation.value),
+                      child: Image.network(
+                        widget.category.imageUrl,
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            _getFallbackIcon(widget.category.name),
+                            size: 60,
+                            color: Colors.white,
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            widget.category.name,
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class CategoriesSection extends StatelessWidget {
+  final Function(String) onCategorySelected;
+
+  const CategoriesSection({Key? key, required this.onCategorySelected})
+    : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20.0),
+          child: Text(
+            'Browse Categories',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(height: 24),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children:
+                categories.map((category) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: CategoryCard(
+                      category: category,
+                      onCategorySelected: onCategorySelected,
+                    ),
+                  );
+                }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,19 +245,9 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> {
   final int _currentIndex = 0;
-  late TabController _tabController;
-  final List<String> _categories = [
-    'All',
-    'Books',
-    'Electronics',
-    'Furniture',
-    'Clothing',
-    'Appliances',
-    'Transportation',
-  ];
+  String _selectedCategory = 'All';
 
   // Mock product data
   final List<Product> _products = [
@@ -77,18 +301,6 @@ class _HomeScreenState extends State<HomeScreen>
     ),
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: _categories.length, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
   void _onNavBarTap(int index) {
     if (index == _currentIndex) return;
 
@@ -118,8 +330,16 @@ class _HomeScreenState extends State<HomeScreen>
     return _products.where((product) => product.category == category).toList();
   }
 
+  void _onCategorySelected(String category) {
+    setState(() {
+      _selectedCategory = category;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final filteredProducts = _getFilteredProducts(_selectedCategory);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('CampusCart'),
@@ -140,7 +360,6 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       body: Column(
         children: [
-          // Search Bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: InkWell(
@@ -170,55 +389,39 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ),
 
-          // Category Tabs
-          TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            labelColor: AppColors.primary,
-            unselectedLabelColor: Colors.grey[600],
-            indicatorColor: AppColors.primary,
-            tabs: _categories.map((category) => Tab(text: category)).toList(),
-          ),
+          CategoriesSection(onCategorySelected: _onCategorySelected),
 
-          // Product Grid
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children:
-                  _categories.map((category) {
-                    final filteredProducts = _getFilteredProducts(category);
-                    return filteredProducts.isEmpty
-                        ? Center(
-                          child: Text(
-                            'No products in this category',
-                            style: TextStyle(color: Colors.grey[600]),
+            child:
+                filteredProducts.isEmpty
+                    ? Center(
+                      child: Text(
+                        'No products in this category',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    )
+                    : GridView.builder(
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.70,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
                           ),
-                        )
-                        : GridView.builder(
-                          padding: const EdgeInsets.all(16),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                childAspectRatio:
-                                    0.70, // Adjusted for taller cards
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
-                              ),
-                          itemCount: filteredProducts.length,
-                          itemBuilder: (context, index) {
-                            return ProductCard(
-                              product: filteredProducts[index],
-                              onTap: () {
-                                Navigator.pushNamed(
-                                  context,
-                                  '/product/${filteredProducts[index].id}',
-                                );
-                              },
+                      itemCount: filteredProducts.length,
+                      itemBuilder: (context, index) {
+                        return ProductCard(
+                          product: filteredProducts[index],
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/product/${filteredProducts[index].id}',
                             );
                           },
                         );
-                  }).toList(),
-            ),
+                      },
+                    ),
           ),
         ],
       ),
