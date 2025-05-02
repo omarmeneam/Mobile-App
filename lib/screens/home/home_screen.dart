@@ -124,20 +124,26 @@ class _CategoryCardState extends State<CategoryCard>
 
   @override
   Widget build(BuildContext context) {
+    // Calculate responsive sizes based on screen width
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardSize = screenWidth * 0.22; // 22% of screen width
+    final iconSize = cardSize * 0.8; // 80% of card size
+    final verticalPadding = cardSize * 0.4; // 40% of card size for top padding
+
     return GestureDetector(
       onTap: () => widget.onCategorySelected(widget.category.name),
       child: Column(
         children: [
-          const SizedBox(height: 40),
+          SizedBox(height: verticalPadding),
           Stack(
             clipBehavior: Clip.none,
             alignment: Alignment.center,
             children: [
               Container(
-                width: 100,
-                height: 100,
+                width: cardSize,
+                height: cardSize,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(cardSize * 0.2),
                   boxShadow: [
                     BoxShadow(
                       color: widget.category.gradientStart.withAlpha(51),
@@ -157,7 +163,7 @@ class _CategoryCardState extends State<CategoryCard>
                 ),
               ),
               Positioned(
-                top: -40,
+                top: -verticalPadding,
                 child: AnimatedBuilder(
                   animation: _rotationAnimation,
                   builder: (context, child) {
@@ -170,13 +176,13 @@ class _CategoryCardState extends State<CategoryCard>
                             ..rotateZ(_rotationAnimation.value),
                       child: Image.network(
                         widget.category.imageUrl,
-                        width: 80,
-                        height: 80,
+                        width: iconSize,
+                        height: iconSize,
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) {
                           return Icon(
                             _getFallbackIcon(widget.category.name),
-                            size: 60,
+                            size: iconSize * 0.75,
                             color: Colors.white,
                           );
                         },
@@ -358,72 +364,76 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: InkWell(
-              onTap: () {
-                Navigator.pushNamed(context, '/search');
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.search, color: Colors.grey[600]),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Search for items...',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                  ],
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: InkWell(
+                onTap: () {
+                  Navigator.pushNamed(context, '/search');
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.search, color: Colors.grey[600]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Search for items...',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
 
-          CategoriesSection(onCategorySelected: _onCategorySelected),
+            CategoriesSection(onCategorySelected: _onCategorySelected),
 
-          Expanded(
-            child:
-                filteredProducts.isEmpty
-                    ? Center(
-                      child: Text(
-                        'No products in this category',
-                        style: TextStyle(color: Colors.grey[600]),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child:
+                  filteredProducts.isEmpty
+                      ? Center(
+                        child: Text(
+                          'No products in this category',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      )
+                      : GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.70,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                            ),
+                        itemCount: filteredProducts.length,
+                        itemBuilder: (context, index) {
+                          return ProductCard(
+                            product: filteredProducts[index],
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/product/${filteredProducts[index].id}',
+                              );
+                            },
+                          );
+                        },
                       ),
-                    )
-                    : GridView.builder(
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.70,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                          ),
-                      itemCount: filteredProducts.length,
-                      itemBuilder: (context, index) {
-                        return ProductCard(
-                          product: filteredProducts[index],
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/product/${filteredProducts[index].id}',
-                            );
-                          },
-                        );
-                      },
-                    ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
