@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/message.dart';
 import '../../theme/app_colors.dart';
 import '../../models/product.dart';
+import '../../models/user.dart';
 
 class ChatScreen extends StatefulWidget {
   final int userId;

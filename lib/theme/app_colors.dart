@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Primary semantic colors based on the provided palette
-  static const Color primary = Color(0xFFFFAEBC); // Hot Pink
-  static const Color secondary = Color(0xFFA0E7E5); // Tiffany Blue
-  static const Color tertiary = Color(0xFFB4F8C8); // Mint
+  static const Color primary = Color(0xFFE06B85); // Darker Pink for better contrast
+  static const Color secondary = Color(0xFF62B7B4); // Darker Tiffany Blue
+  static const Color tertiary = Color(0xFF93D6A4); // Darker Mint
   static const Color accent = Color(0xFFFBE7C6); // Yellow
 
   // Functional semantic colors
-  static const Color success = Color(0xFFB4F8C8); // Using Mint for success
+  static const Color success = Color(0xFF93D6A4); // Using darker Mint for success
   static const Color warning = Color(0xFFFBE7C6); // Using Yellow for warning
   static const Color error = Color(0xFFFF6B6B); // Custom error color
-  static const Color info = Color(0xFFA0E7E5); // Using Tiffany Blue for info
+  static const Color info = Color(0xFF62B7B4); // Using darker Tiffany Blue for info
 
   // Text colors
   static const Color textPrimary = Color(0xFF212121);
@@ -36,12 +36,12 @@ class AppColors {
   
   // Gradient colors
   static const List<Color> primaryGradient = [
-    Color(0xFFFFAEBC),
-    Color(0xFFFFC3CF),
+    Color(0xFFE06B85),
+    Color(0xFFF095A9),
   ];
   
   static const List<Color> secondaryGradient = [
-    Color(0xFFA0E7E5),
-    Color(0xFFBFF0EF),
+    Color(0xFF62B7B4),
+    Color(0xFF8ACBC9),
   ];
 }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../widgets/product_card.dart';
-import '../../models/product.dart';
+import '../../viewmodels/home_viewmodel.dart';
 
 IconData _getFallbackIcon(String categoryName) {
   switch (categoryName.toLowerCase()) {
@@ -88,10 +89,10 @@ class CategoryCard extends StatefulWidget {
   final Function(String) onCategorySelected;
 
   const CategoryCard({
-    Key? key,
+    super.key,
     required this.category,
     required this.onCategorySelected,
-  }) : super(key: key);
+  });
 
   @override
   State<CategoryCard> createState() => _CategoryCardState();
@@ -207,8 +208,7 @@ class _CategoryCardState extends State<CategoryCard>
 class CategoriesSection extends StatelessWidget {
   final Function(String) onCategorySelected;
 
-  const CategoriesSection({Key? key, required this.onCategorySelected})
-    : super(key: key);
+  const CategoriesSection({super.key, required this.onCategorySelected});
 
   @override
   Widget build(BuildContext context) {
@@ -255,57 +255,14 @@ class _HomeScreenState extends State<HomeScreen> {
   final int _currentIndex = 0;
   String _selectedCategory = 'All';
 
-  // Mock product data
-  final List<Product> _products = [
-    Product(
-      id: 1,
-      title: 'Textbook - Introduction to Psychology',
-      price: 45.0,
-      image: 'assets/images/placeholder.png',
-      category: 'Books',
-      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-    ),
-    Product(
-      id: 2,
-      title: 'Desk Lamp - Adjustable LED',
-      price: 25.0,
-      image: 'assets/images/placeholder.png',
-      category: 'Electronics',
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    Product(
-      id: 3,
-      title: 'Dorm Mini Fridge',
-      price: 80.0,
-      image: 'assets/images/placeholder.png',
-      category: 'Appliances',
-      createdAt: DateTime.now().subtract(const Duration(days: 3)),
-    ),
-    Product(
-      id: 4,
-      title: 'Scientific Calculator',
-      price: 30.0,
-      image: 'assets/images/placeholder.png',
-      category: 'Electronics',
-      createdAt: DateTime.now().subtract(const Duration(days: 5)),
-    ),
-    Product(
-      id: 5,
-      title: 'Bicycle - Campus Cruiser',
-      price: 120.0,
-      image: 'assets/images/placeholder.png',
-      category: 'Transportation',
-      createdAt: DateTime.now().subtract(const Duration(days: 7)),
-    ),
-    Product(
-      id: 6,
-      title: 'Desk Chair - Ergonomic',
-      price: 65.0,
-      image: 'assets/images/placeholder.png',
-      category: 'Furniture',
-      createdAt: DateTime.now().subtract(const Duration(days: 10)),
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Fetch products when the screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<HomeViewModel>(context, listen: false).loadProducts();
+    });
+  }
 
   void _onNavBarTap(int index) {
     if (index == _currentIndex) return;
@@ -329,13 +286,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  List<Product> _getFilteredProducts(String category) {
-    if (category == 'All') {
-      return _products;
-    }
-    return _products.where((product) => product.category == category).toList();
-  }
-
   void _onCategorySelected(String category) {
     setState(() {
       _selectedCategory = category;
@@ -344,101 +294,114 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredProducts = _getFilteredProducts(_selectedCategory);
+    return Consumer<HomeViewModel>(
+      builder: (context, viewModel, child) {
+        // Get filtered products based on selected category
+        final filteredProducts = _selectedCategory == 'All'
+            ? viewModel.products
+            : viewModel.getProductsByCategory(_selectedCategory);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('CampusCart'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.message_outlined),
-            onPressed: () {
-              Navigator.pushNamed(context, '/messages');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              Navigator.pushNamed(context, '/notifications');
-            },
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: InkWell(
-                onTap: () {
-                  Navigator.pushNamed(context, '/search');
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('CampusCart'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.message_outlined),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/messages');
                 },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.search, color: Colors.grey[600]),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Search for items...',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                ),
               ),
-            ),
-
-            CategoriesSection(onCategorySelected: _onCategorySelected),
-
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child:
-                  filteredProducts.isEmpty
-                      ? Center(
-                        child: Text(
-                          'No products in this category',
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      )
-                      : GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 0.70,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
+              IconButton(
+                icon: const Icon(Icons.notifications_outlined),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/notifications');
+                },
+              ),
+            ],
+          ),
+          body: viewModel.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : viewModel.error.isNotEmpty
+                  ? Center(child: Text(viewModel.error))
+                  : SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.pushNamed(context, '/search');
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.search, color: Colors.grey[600]),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Search for items...',
+                                      style: TextStyle(color: Colors.grey[600]),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                        itemCount: filteredProducts.length,
-                        itemBuilder: (context, index) {
-                          return ProductCard(
-                            product: filteredProducts[index],
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/product/${filteredProducts[index].id}',
-                              );
-                            },
-                          );
-                        },
+                          ),
+
+                          CategoriesSection(onCategorySelected: _onCategorySelected),
+
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+                            child:
+                                filteredProducts.isEmpty
+                                    ? Center(
+                                        child: Text(
+                                          'No products in this category',
+                                          style: TextStyle(color: Colors.grey[600]),
+                                        ),
+                                      )
+                                    : GridView.builder(
+                                        shrinkWrap: true,
+                                        physics: const NeverScrollableScrollPhysics(),
+                                        gridDelegate:
+                                            const SliverGridDelegateWithFixedCrossAxisCount(
+                                              crossAxisCount: 2,
+                                              childAspectRatio: 0.65,
+                                              crossAxisSpacing: 12,
+                                              mainAxisSpacing: 12,
+                                            ),
+                                        itemCount: filteredProducts.length,
+                                        itemBuilder: (context, index) {
+                                          return ProductCard(
+                                            product: filteredProducts[index],
+                                            onTap: () {
+                                              Navigator.pushNamed(
+                                                context,
+                                                '/product/${filteredProducts[index].id}',
+                                              );
+                                            },
+                                          );
+                                        },
+                                      ),
+                          ),
+                          // Extra space at the bottom for safe area
+                          const SizedBox(height: 8),
+                        ],
                       ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: _currentIndex,
-        onTap: _onNavBarTap,
-      ),
+                    ),
+          bottomNavigationBar: BottomNavBar(
+            currentIndex: _currentIndex,
+            onTap: _onNavBarTap,
+          ),
+        );
+      },
     );
   }
 }

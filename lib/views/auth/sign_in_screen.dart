@@ -7,6 +7,23 @@ class SignInScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          // Dev mode access to admin dashboard
+          IconButton(
+            icon: const Icon(
+              Icons.admin_panel_settings,
+              color: Colors.grey,
+            ),
+            onPressed: () {
+              Navigator.pushNamed(context, '/admin');
+            },
+            tooltip: 'Admin Dashboard (Dev Mode)',
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
