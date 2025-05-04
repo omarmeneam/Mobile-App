@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../models/message.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../theme/app_colors.dart';
-import '../../models/product.dart';
 import '../../viewmodels/messages_viewmodel.dart';
 
 class MessagesScreen extends StatefulWidget {

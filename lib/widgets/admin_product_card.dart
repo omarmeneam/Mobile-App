@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
-import '../theme/app_colors.dart';
 
 class AdminProductCard extends StatelessWidget {
   final Product product;

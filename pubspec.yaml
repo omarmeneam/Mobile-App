@@ -38,6 +38,8 @@ dependencies:
   whitecodel_reels: ^0.0.6 
   firebase_core: ^3.12.1
   provider: ^6.1.5
+  firebase_auth: ^5.5.1
+  google_sign_in: ^6.2.1
 
 dev_dependencies:
   flutter_test:

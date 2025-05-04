@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
 import 'views/auth/sign_in_screen.dart';
@@ -23,7 +25,12 @@ import 'viewmodels/wishlist_viewmodel.dart';
 import 'viewmodels/messages_viewmodel.dart';
 import 'viewmodels/notifications_viewmodel.dart';
 
-void main() {
+void main() async{
+  // Initialize Firebase
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
