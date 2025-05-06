@@ -13,10 +13,11 @@ class MessagingService {
       Conversation(
         id: 1,
         user: User(
-          id: 2,
+          uid: '2',
           name: 'Maria Garcia',
           avatar: 'assets/images/avatars/maria.jpg',
           online: true,
+          email: 'maria@example.com',
         ),
         lastMessage: Message(
           id: 1,
@@ -36,9 +37,10 @@ class MessagingService {
       Conversation(
         id: 2,
         user: User(
-          id: 3,
+          uid: '3',
           name: 'James Wilson',
           avatar: 'assets/images/avatars/james.jpg',
+          email: 'james@example.com',
         ),
         lastMessage: Message(
           id: 2,

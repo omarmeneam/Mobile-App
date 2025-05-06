@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_colors.dart';
 import '../../viewmodels/profile_viewmodel.dart';
+import 'profile_screen.dart'; // Add this import
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -40,10 +41,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void _saveChanges() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      
+
       final viewModel = Provider.of<ProfileViewModel>(context, listen: false);
       final success = await viewModel.updateProfile();
-      
+
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -55,9 +56,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(viewModel.error.isEmpty 
-              ? 'Failed to update profile' 
-              : viewModel.error),
+            content: Text(
+              viewModel.error.isEmpty
+                  ? 'Failed to update profile'
+                  : viewModel.error,
+            ),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -74,14 +77,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        
+
         if (viewModel.error.isNotEmpty && viewModel.user == null) {
           return Scaffold(
             appBar: AppBar(title: const Text('Error')),
             body: Center(child: Text(viewModel.error)),
           );
         }
-        
+
         return Scaffold(
           appBar: AppBar(
             title: const Text('Edit Profile'),
@@ -110,12 +113,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   // Avatar
                   Stack(
                     children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundImage: viewModel.avatarFile != null
-                            ? FileImage(viewModel.avatarFile!) as ImageProvider
-                            : AssetImage(viewModel.user?.avatar ?? 'assets/images/placeholder.png'),
-                      ),
+                      ProfileScreen.buildAvatar(viewModel.user!.avatar),
                       Positioned(
                         bottom: 0,
                         right: 0,
@@ -128,7 +126,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
-                              Icons.camera_alt,
+                              Icons.edit,
                               color: Colors.white,
                               size: 20,
                             ),
@@ -182,6 +180,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         viewModel.email = value;
                       }
                     },
+                    readOnly: true,  // Prevents editing
+                    enabled: false,  // Disables user interaction
                   ),
                   const SizedBox(height: 16),
 
@@ -201,23 +201,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Bio Field
-                  TextFormField(
-                    initialValue: viewModel.bio,
-                    decoration: const InputDecoration(
-                      labelText: 'Bio',
-                      prefixIcon: Icon(Icons.info),
-                      alignLabelWithHint: true,
-                    ),
-                    maxLines: 4,
-                    onSaved: (value) {
-                      if (value != null) {
-                        viewModel.bio = value;
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
+                  
                   // Save Button
                   SizedBox(
                     width: double.infinity,

@@ -99,7 +99,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                 viewModel.loadMessages(conversation.id);
                                 Navigator.pushNamed(
                                   context,
-                                  '/messages/${conversation.user.id}',
+                                  '/messages/${conversation.user.uid}',
                                 );
                               },
                               child: Container(

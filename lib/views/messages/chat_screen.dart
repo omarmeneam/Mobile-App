@@ -32,10 +32,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // Initialize mock data
     _user = User(
-      id: widget.userId,
+      uid: widget.userId.toString(),
       name: 'Jamie Smith',
       avatar: 'assets/images/placeholder.png',
       online: true,
+      email: 'jamie@example.com',
     );
 
     _product = Product(
