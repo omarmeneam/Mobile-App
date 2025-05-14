@@ -1,7 +1,11 @@
+import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../theme/app_colors.dart';
 import '../../viewmodels/profile_viewmodel.dart';
+import '../../utils/image_helper.dart';
 import 'profile_screen.dart'; // Add this import
 
 class EditProfileScreen extends StatefulWidget {
@@ -13,6 +17,7 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -28,14 +33,48 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
   }
 
-  void _pickImage() {
-    // In a real app, this would use image_picker to select an image
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Image selection would be implemented here'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+  // Widget to display the selected image or current user avatar
+  Widget _buildAvatarWidget(ProfileViewModel viewModel) {
+    // If a new image file is selected, display it
+    if (viewModel.avatarFile != null) {
+      return CircleAvatar(
+        radius: 40,
+        backgroundImage: FileImage(viewModel.avatarFile!),
+      );
+    }
+    // Otherwise display the existing avatar
+    return ProfileScreen.buildAvatar(viewModel.user!.avatar);
+  }
+
+  // Simple method to pick image from gallery
+  void _pickImage() async {
+    try {
+      final viewModel = Provider.of<ProfileViewModel>(context, listen: false);
+
+      // Pick image directly from gallery
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: 800,
+        maxHeight: 800,
+      );
+
+      // If image was selected, update the viewModel
+      if (pickedFile != null) {
+        setState(() {
+          viewModel.avatarFile = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking image: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   void _saveChanges() async {
@@ -110,15 +149,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Avatar
-                  Stack(
-                    children: [
-                      ProfileScreen.buildAvatar(viewModel.user!.avatar),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: _pickImage,
+                  // Avatar with tap to change
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Stack(
+                      children: [
+                        _buildAvatarWidget(viewModel),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
@@ -132,10 +171,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 24),
+
+                  // Show clear button if a new image is selected
+                  if (viewModel.avatarFile != null)
+                    TextButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          viewModel.avatarFile = null;
+                        });
+                      },
+                      icon: const Icon(Icons.close),
+                      label: const Text('Clear selected image'),
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    ),
+
+                  const SizedBox(height: 16),
 
                   // Name Field
                   TextFormField(
@@ -180,8 +234,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         viewModel.email = value;
                       }
                     },
-                    readOnly: true,  // Prevents editing
-                    enabled: false,  // Disables user interaction
+                    readOnly: true, // Prevents editing
+                    enabled: false, // Disables user interaction
                   ),
                   const SizedBox(height: 16),
 
@@ -201,7 +255,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  
                   // Save Button
                   SizedBox(
                     width: double.infinity,

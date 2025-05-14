@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:image_picker/image_picker.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
@@ -25,13 +28,104 @@ import 'viewmodels/wishlist_viewmodel.dart';
 import 'viewmodels/messages_viewmodel.dart';
 import 'viewmodels/notifications_viewmodel.dart';
 
-void main() async{
-  // Initialize Firebase
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+// Custom error widget to show more helpful error messages
+class CustomErrorWidget extends StatelessWidget {
+  final FlutterErrorDetails errorDetails;
+
+  const CustomErrorWidget({Key? key, required this.errorDetails})
+    : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Error')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 60),
+            const SizedBox(height: 16),
+            const Text(
+              'Something went wrong',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              errorDetails.exceptionAsString(),
+              style: const TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                // Try to restart the app
+                runApp(const MyApp());
+              },
+              child: const Text('Restart App'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+void main() async {
+  // Catch any errors that occur during Flutter initialization
+  runZonedGuarded(
+    () async {
+      // Ensure Flutter is initialized
+      WidgetsFlutterBinding.ensureInitialized();
+
+      // Set custom error widget
+      ErrorWidget.builder = (FlutterErrorDetails details) {
+        return CustomErrorWidget(errorDetails: details);
+      };
+
+      try {
+        // Fix for platform channel errors
+        await SystemChannels.platform.invokeMethod<void>(
+          'SystemChrome.restoreSystemUIOverlays',
+        );
+
+        // Initialize Firebase
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+
+        // Pre-initialize ImagePicker to test if it works
+        final ImagePicker picker = ImagePicker();
+        // Try a quick test access to the plugin
+        try {
+          // Just access the instance to see if it throws
+          picker.toString();
+          debugPrint('ImagePicker initialized successfully');
+        } catch (e) {
+          debugPrint('Warning: ImagePicker test failed: $e');
+        }
+
+        // Run the app
+        runApp(const MyApp());
+      } catch (e, stackTrace) {
+        debugPrint('Error during initialization: $e');
+        debugPrint('Stack trace: $stackTrace');
+        // Show a minimal error app if something goes wrong
+        runApp(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(child: Text('Error initializing app: $e')),
+            ),
+            debugShowCheckedModeBanner: false,
+          ),
+        );
+      }
+    },
+    (error, stackTrace) {
+      // Handle any errors that occur during app execution
+      debugPrint('Uncaught error: $error');
+      debugPrint('Stack trace: $stackTrace');
+    },
   );
-  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {

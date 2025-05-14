@@ -40,6 +40,13 @@ dependencies:
   provider: ^6.1.5
   firebase_auth: ^5.5.1
   google_sign_in: ^6.2.1
+  image_picker: ^1.1.2
+  firebase_storage: ^12.4.5
+  path: ^1.9.1
+  flutter_image_compress: ^2.4.0
+  image: ^4.5.4
+  cached_network_image: ^3.4.1
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:

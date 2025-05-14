@@ -123,38 +123,47 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      String avatarUrl = _user!.avatar;
-
-      // If avatar was changed, upload it
-      if (_avatarFile != null) {
-        avatarUrl = await _storageService.uploadImage(_avatarFile!);
-      }
-
       // Get current user
       final firebase.User? firebaseUser = _auth.currentUser;
-
-      if (firebaseUser != null) {
-        // Update Firebase user profile
-        await firebaseUser.updateDisplayName(_name);
-
-        // Email update requires re-authentication, only update if changed
-        if (_email != firebaseUser.email) {
-          await firebaseUser.updateEmail(_email);
-        }
-
-        // Update photo URL if available
-        if (avatarUrl != _user!.avatar) {
-          await firebaseUser.updatePhotoURL(avatarUrl);
-        }
-
-        // Refresh user to get updated data
-        await firebaseUser.reload();
-
-        // Update local user object with new data
-        _user = User.fromFirebaseUser(_auth.currentUser!);
-
-        // TODO: Store additional profile data (bio, phone) in Firestore or other DB
+      if (firebaseUser == null) {
+        _error = 'User not authenticated';
+        return false;
       }
+
+      String avatarUrl = _user!.avatar;
+
+      // Upload new avatar if available
+      if (_avatarFile != null) {
+        try {
+          // Upload the new image file
+          avatarUrl = await _storageService.uploadImage(_avatarFile!);
+
+          // Update Firebase user profile with new photo URL
+          await firebaseUser.updatePhotoURL(avatarUrl);
+
+          // Clear the avatar file after successful upload
+          _avatarFile = null;
+        } catch (e) {
+          print('Error uploading avatar: $e');
+          _error = 'Failed to upload profile picture: ${e.toString()}';
+          return false;
+        }
+      }
+
+      // Update other user information
+      await firebaseUser.updateDisplayName(_name);
+
+      // Refresh user to get updated data
+      await firebaseUser.reload();
+
+      // Update local user object with new data
+      _user = User.fromFirebaseUser(_auth.currentUser!);
+
+      // Synchronize form data with updated user
+      _name = _user!.name;
+      _email = _user!.email;
+      _bio = _user!.bio;
+      _phone = _user!.phone;
 
       return true;
     } catch (e) {
@@ -168,27 +177,82 @@ class ProfileViewModel extends ChangeNotifier {
 
   // Sign out user
   Future<void> signOut() async {
+    _isLoading = true;
+    _error = '';
+    notifyListeners();
+
     try {
-      // Sign out from Firebase
+      // Using a safer approach to sign out
+
+      // First try to sign out from Google
+      // Do this first since it sometimes depends on Firebase Auth
+      bool googleSignOutAttempted = false;
+
+      try {
+        final GoogleSignIn googleSignIn = GoogleSignIn();
+
+        // Add timeout to isSignedIn check to prevent hanging
+        bool isSignedIn = false;
+        try {
+          isSignedIn = await googleSignIn.isSignedIn().timeout(
+            const Duration(seconds: 3),
+            onTimeout: () {
+              print(
+                "Google isSignedIn check timed out - assuming not signed in",
+              );
+              return false;
+            },
+          );
+        } catch (checkError) {
+          print("Error checking Google sign in status: $checkError");
+          isSignedIn = false;
+        }
+
+        if (isSignedIn) {
+          googleSignOutAttempted = true;
+          // First try regular sign out with timeout
+          await googleSignIn.signOut().timeout(
+            const Duration(seconds: 3),
+            onTimeout: () {
+              print("Google signOut timed out - continuing anyway");
+              return;
+            },
+          );
+
+          // Then try to disconnect (but don't block on failure)
+          try {
+            await googleSignIn.disconnect().timeout(
+              const Duration(seconds: 2),
+              onTimeout: () {
+                print("Google disconnect timed out - continuing anyway");
+                return;
+              },
+            );
+          } catch (disconnectError) {
+            print("Non-critical error during disconnect: $disconnectError");
+            // Continue even if disconnect fails
+          }
+        }
+      } catch (googleError) {
+        print("Error during Google sign out: $googleError");
+        // Continue to Firebase sign out even if Google sign out fails
+      }
+
+      // Then sign out from Firebase
       await _auth.signOut();
 
-      // Sign out from Google as well
-      final GoogleSignIn googleSignIn = GoogleSignIn();
-
-      // Check if signed in before attempting to sign out
-      if (await googleSignIn.isSignedIn()) {
-        await googleSignIn.signOut();
-
-        // Try to disconnect but don't fail if it errors
-        try {
-          await googleSignIn.disconnect();
-        } catch (e) {
-          print("Non-critical error during disconnect: $e");
-          // Continue even if disconnect fails
-        }
-      }
+      // Clear user data
+      _user = null;
+      _name = '';
+      _email = '';
+      _bio = '';
+      _phone = '';
+      _avatarFile = null;
     } catch (e) {
       _error = 'Failed to sign out: ${e.toString()}';
+      print("Sign out error: $_error");
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }

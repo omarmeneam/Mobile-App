@@ -13,14 +13,48 @@ class ProfileScreen extends StatefulWidget {
     if (avatarUrl.startsWith('http')) {
       return CircleAvatar(
         radius: 40,
-        backgroundImage: NetworkImage(avatarUrl),
-        onBackgroundImageError: (exception, stackTrace) {
-          print('Error loading profile image: $exception');
-        },
+        backgroundColor: Colors.grey[200],
+        child: ClipOval(
+          child: Image.network(
+            avatarUrl,
+            width: 80,
+            height: 80,
+            fit: BoxFit.cover,
+            // Handle loading state
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Center(
+                child: CircularProgressIndicator(
+                  value:
+                      loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
+                  strokeWidth: 2,
+                ),
+              );
+            },
+            // Handle loading errors gracefully
+            errorBuilder: (context, error, stackTrace) {
+              print('Error loading profile image: $error');
+              // On error, show a fallback image
+              return Image.asset(
+                'assets/images/avatars/default.jpg',
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+              );
+            },
+          ),
+        ),
       );
     } else {
       // Local asset image
-      return CircleAvatar(radius: 40, backgroundImage: AssetImage(avatarUrl));
+      return CircleAvatar(
+        radius: 40,
+        backgroundColor: Colors.grey[200],
+        backgroundImage: AssetImage(avatarUrl),
+      );
     }
   }
 
@@ -63,61 +97,89 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _signOut() {
+    // Create a scaffold messenger key to use outside of context
+    final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
+        GlobalKey<ScaffoldMessengerState>();
+
     showDialog(
       context: context,
       builder:
-          (context) => AlertDialog(
+          (BuildContext dialogContext) => AlertDialog(
             title: const Text('Sign Out'),
             content: const Text('Are you sure you want to sign out?'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('Cancel'),
               ),
               TextButton(
-                onPressed: () async {
+                onPressed: () {
                   // First dismiss the dialog
-                  Navigator.pop(context);
+                  Navigator.pop(dialogContext);
 
-                  // Show loading indicator
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder:
-                        (context) =>
-                            const Center(child: CircularProgressIndicator()),
-                  );
-
-                  try {
-                    // Sign out using the view model
-                    final profileViewModel = Provider.of<ProfileViewModel>(
-                      context,
-                      listen: false,
-                    );
-                    await profileViewModel.signOut();
-
-                    // Close loading dialog and navigate to sign-in screen
-                    Navigator.pop(context);
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      '/sign-in',
-                      (route) => false, // Clear all routes in the stack
-                    );
-                  } catch (e) {
-                    // Close loading dialog
-                    Navigator.pop(context);
-
-                    // Show error
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error signing out: $e')),
-                    );
-                  }
+                  // Use a separate function to handle the async work
+                  _performSignOut();
                 },
                 child: const Text('Sign Out'),
               ),
             ],
           ),
     );
+  }
+
+  // Separate method to handle the async sign out process
+  Future<void> _performSignOut() async {
+    // Store the BuildContext at the beginning of the operation
+    final BuildContext currentContext = context;
+
+    // Track whether we're still mounted throughout the async operation
+    bool isCurrentlyMounted = true;
+
+    // Keep track of the current state to properly handle navigation
+    bool signedOut = false;
+
+    // Show loading overlay that doesn't depend on async Dialog
+    final OverlayState overlayState = Overlay.of(currentContext);
+    final OverlayEntry overlayEntry = OverlayEntry(
+      builder:
+          (BuildContext context) => Container(
+            color: Colors.black54,
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+    );
+
+    overlayState.insert(overlayEntry);
+
+    try {
+      // Reference the viewModel once before async operations
+      final profileViewModel = Provider.of<ProfileViewModel>(
+        currentContext,
+        listen: false,
+      );
+
+      // Perform sign out
+      await profileViewModel.signOut();
+      signedOut = true;
+    } catch (e) {
+      // Handle error - we'll show it below if still mounted
+      if (mounted) {
+        ScaffoldMessenger.of(
+          currentContext,
+        ).showSnackBar(SnackBar(content: Text('Error signing out: $e')));
+      }
+    } finally {
+      // Always remove the loading overlay
+      overlayEntry.remove();
+
+      // Only navigate if we're still mounted and actually signed out
+      if (mounted && signedOut) {
+        // Navigate without using context from a callback
+        Navigator.of(currentContext).pushNamedAndRemoveUntil(
+          '/sign-in',
+          (route) => false, // Clear all routes in the stack
+        );
+      }
+    }
   }
 
   @override
@@ -154,7 +216,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         // User Profile Card
                         Card(
-                         
                           elevation: 0,
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
