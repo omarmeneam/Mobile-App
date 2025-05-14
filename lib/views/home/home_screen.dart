@@ -297,13 +297,24 @@ class _HomeScreenState extends State<HomeScreen> {
     return Consumer<HomeViewModel>(
       builder: (context, viewModel, child) {
         // Get filtered products based on selected category
-        final filteredProducts = _selectedCategory == 'All'
-            ? viewModel.products
-            : viewModel.getProductsByCategory(_selectedCategory);
+        final filteredProducts =
+            _selectedCategory == 'All'
+                ? viewModel.products
+                : viewModel.getProductsByCategory(_selectedCategory);
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('CampusCart'),
+            title: Row(
+              children: [
+                Image.asset(
+                  'assets/images/LogoImage.png',
+                  width: 30,
+                  height: 30,
+                ),
+                const SizedBox(width: 8),
+                Image.asset('assets/images/LogoText.png', height: 26),
+              ],
+            ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.message_outlined),
@@ -319,83 +330,92 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          body: viewModel.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : viewModel.error.isNotEmpty
+          body:
+              viewModel.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : viewModel.error.isNotEmpty
                   ? Center(child: Text(viewModel.error))
                   : SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: InkWell(
-                              onTap: () {
-                                Navigator.pushNamed(context, '/search');
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.search, color: Colors.grey[600]),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Search for items...',
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                  ],
-                                ),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.pushNamed(context, '/search');
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.search, color: Colors.grey[600]),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Search for items...',
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
+                        ),
 
-                          CategoriesSection(onCategorySelected: _onCategorySelected),
+                        CategoriesSection(
+                          onCategorySelected: _onCategorySelected,
+                        ),
 
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
-                            child:
-                                filteredProducts.isEmpty
-                                    ? Center(
-                                        child: Text(
-                                          'No products in this category',
-                                          style: TextStyle(color: Colors.grey[600]),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            16.0,
+                            16.0,
+                            16.0,
+                            8.0,
+                          ),
+                          child:
+                              filteredProducts.isEmpty
+                                  ? Center(
+                                    child: Text(
+                                      'No products in this category',
+                                      style: TextStyle(color: Colors.grey[600]),
+                                    ),
+                                  )
+                                  : GridView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    gridDelegate:
+                                        const SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: 2,
+                                          childAspectRatio: 0.65,
+                                          crossAxisSpacing: 12,
+                                          mainAxisSpacing: 12,
                                         ),
-                                      )
-                                    : GridView.builder(
-                                        shrinkWrap: true,
-                                        physics: const NeverScrollableScrollPhysics(),
-                                        gridDelegate:
-                                            const SliverGridDelegateWithFixedCrossAxisCount(
-                                              crossAxisCount: 2,
-                                              childAspectRatio: 0.65,
-                                              crossAxisSpacing: 12,
-                                              mainAxisSpacing: 12,
-                                            ),
-                                        itemCount: filteredProducts.length,
-                                        itemBuilder: (context, index) {
-                                          return ProductCard(
-                                            product: filteredProducts[index],
-                                            onTap: () {
-                                              Navigator.pushNamed(
-                                                context,
-                                                '/product/${filteredProducts[index].id}',
-                                              );
-                                            },
+                                    itemCount: filteredProducts.length,
+                                    itemBuilder: (context, index) {
+                                      return ProductCard(
+                                        product: filteredProducts[index],
+                                        onTap: () {
+                                          Navigator.pushNamed(
+                                            context,
+                                            '/product/${filteredProducts[index].id}',
                                           );
                                         },
-                                      ),
-                          ),
-                          // Extra space at the bottom for safe area
-                          const SizedBox(height: 8),
-                        ],
-                      ),
+                                      );
+                                    },
+                                  ),
+                        ),
+                        // Extra space at the bottom for safe area
+                        const SizedBox(height: 8),
+                      ],
                     ),
+                  ),
           bottomNavigationBar: BottomNavBar(
             currentIndex: _currentIndex,
             onTap: _onNavBarTap,

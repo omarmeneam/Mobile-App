@@ -188,7 +188,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (context, viewModel, child) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Profile'),
+            title: Row(
+              children: [
+                Image.asset(
+                  'assets/images/LogoImage.png',
+                  width: 30,
+                  height: 30,
+                ),
+                const SizedBox(width: 8),
+                const Text('Profile'),
+              ],
+            ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.settings),
