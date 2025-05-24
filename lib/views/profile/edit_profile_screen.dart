@@ -1,11 +1,9 @@
 import 'dart:io';
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../theme/app_colors.dart';
 import '../../viewmodels/profile_viewmodel.dart';
-import '../../utils/image_helper.dart';
 import 'profile_screen.dart'; // Add this import
 
 class EditProfileScreen extends StatefulWidget {

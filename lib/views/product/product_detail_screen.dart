@@ -5,7 +5,7 @@ import '../../viewmodels/product_viewmodel.dart';
 import '../../viewmodels/wishlist_viewmodel.dart';
 
 class ProductDetailScreen extends StatefulWidget {
-  final int productId;
+  final String productId;
 
   const ProductDetailScreen({super.key, required this.productId});
 
@@ -15,28 +15,38 @@ class ProductDetailScreen extends StatefulWidget {
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _currentImageIndex = 0;
-  
+
   @override
   void initState() {
     super.initState();
     // Fetch product details when the screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ProductViewModel>(context, listen: false).loadProduct(widget.productId);
+      Provider.of<ProductViewModel>(
+        context,
+        listen: false,
+      ).loadProduct(widget.productId);
     });
   }
 
   void _toggleWishlist() async {
-    final productViewModel = Provider.of<ProductViewModel>(context, listen: false);
-    final wishlistViewModel = Provider.of<WishlistViewModel>(context, listen: false);
-    
+    final productViewModel = Provider.of<ProductViewModel>(
+      context,
+      listen: false,
+    );
+    final wishlistViewModel = Provider.of<WishlistViewModel>(
+      context,
+      listen: false,
+    );
+
     if (productViewModel.product != null) {
       final product = productViewModel.product!;
       final isInWishlist = wishlistViewModel.isInWishlist(product.id);
-      
-      final success = isInWishlist 
-          ? await wishlistViewModel.removeFromWishlist(product.id)
-          : await wishlistViewModel.addToWishlist(product);
-      
+
+      final success =
+          isInWishlist
+              ? await wishlistViewModel.removeFromWishlist(product.id)
+              : await wishlistViewModel.addToWishlist(product);
+
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -51,9 +61,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   void _shareProduct() async {
-    final productViewModel = Provider.of<ProductViewModel>(context, listen: false);
+    final productViewModel = Provider.of<ProductViewModel>(
+      context,
+      listen: false,
+    );
     final success = await productViewModel.shareProduct();
-    
+
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -67,31 +80,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void _reportListing() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Report Listing'),
-        content: const Text(
-          'Are you sure you want to report this listing?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Report Listing'),
+            content: const Text(
+              'Are you sure you want to report this listing?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Listing reported'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Report'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Listing reported'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Report'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -104,24 +118,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        
+
         if (productViewModel.error.isNotEmpty) {
           return Scaffold(
             appBar: AppBar(title: const Text('Error')),
             body: Center(child: Text(productViewModel.error)),
           );
         }
-        
+
         if (productViewModel.product == null) {
           return Scaffold(
             appBar: AppBar(title: const Text('Product Not Found')),
-            body: const Center(child: Text('The requested product could not be found')),
+            body: const Center(
+              child: Text('The requested product could not be found'),
+            ),
           );
         }
-        
+
         final product = productViewModel.product!;
         final isInWishlist = wishlistViewModel.isInWishlist(product.id);
-        
+
         // Mock image list
         final List<String> images = [
           product.image,
@@ -141,8 +157,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 onPressed: _toggleWishlist,
               ),
               IconButton(
-                icon: const Icon(Icons.share), 
-                onPressed: _shareProduct
+                icon: const Icon(Icons.share),
+                onPressed: _shareProduct,
               ),
             ],
           ),
@@ -221,7 +237,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         children: [
                           Chip(
                             label: Text(product.category),
-                            backgroundColor: AppColors.secondary.withOpacity(0.2),
+                            backgroundColor: AppColors.secondary.withOpacity(
+                              0.2,
+                            ),
                           ),
                           Text(
                             product.timeAgo,
@@ -261,7 +279,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     const SizedBox(width: 16),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Row(
                                             mainAxisAlignment:
@@ -297,7 +316,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                           Text(
                                             'Member since ${product.seller!.joinedDate}',
                                             style:
-                                                Theme.of(context).textTheme.bodySmall,
+                                                Theme.of(
+                                                  context,
+                                                ).textTheme.bodySmall,
                                           ),
                                         ],
                                       ),
@@ -312,7 +333,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                         onPressed: () {
                                           Navigator.pushNamed(
                                             context,
-                                            '/messages/${product.seller!.id}',
+                                            '/messages/${product.seller!.uid}',
                                           );
                                         },
                                         icon: const Icon(Icons.message),

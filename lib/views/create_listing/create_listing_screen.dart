@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/storage_service.dart';
+import '../../viewmodels/listing_viewmodel.dart';
+import 'package:provider/provider.dart';
+import '../../models/product.dart';
 
 class CreateListingScreen extends StatefulWidget {
   const CreateListingScreen({super.key});
@@ -9,7 +16,9 @@ class CreateListingScreen extends StatefulWidget {
 
 class _CreateListingScreenState extends State<CreateListingScreen> {
   final _formKey = GlobalKey<FormState>();
-  final List<String> _images = [];
+  final List<File> _images = [];
+  final StorageService _storageService = StorageService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isLoading = false;
 
   // Form fields
@@ -27,7 +36,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     super.dispose();
   }
 
-  void _addImage() {
+  Future<void> _pickImage() async {
     if (_images.length >= 5) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -38,10 +47,28 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       return;
     }
 
-    // In a real app, this would open the image picker
-    setState(() {
-      _images.add('assets/images/placeholder.png');
-    });
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920, // Max width before compression
+        maxHeight: 1080, // Max height before compression
+        imageQuality: 85, // Initial quality before compression
+      );
+
+      if (image != null) {
+        setState(() {
+          _images.add(File(image.path));
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error picking image: $e'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   void _removeImage(int index) {
@@ -50,7 +77,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     });
   }
 
-  void _submitForm() {
+  Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       if (_images.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -86,21 +113,71 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         _isLoading = true;
       });
 
-      // Simulate API call
-      Future.delayed(const Duration(seconds: 2), () {
+      try {
+        final currentUser = _auth.currentUser;
+        if (currentUser == null) {
+          throw Exception('User not authenticated');
+        }
+
+        final listingViewModel = Provider.of<ListingViewModel>(
+          context,
+          listen: false,
+        );
+
+        // Upload images and get URLs
+        final List<String> imageUrls = [];
+        for (var image in _images) {
+          final url = await _storageService.uploadImage(image);
+          imageUrls.add(url);
+        }
+
+        // Create product object
+        final product = Product(
+          id: '', // Will be set by Firestore
+          title: _titleController.text,
+          description: _descriptionController.text,
+          price: double.parse(_priceController.text),
+          image: imageUrls.first, // First image as main image
+          images: imageUrls,
+          category: _selectedCategory,
+          condition: _selectedCondition,
+          createdAt: DateTime.now(),
+          sellerId: currentUser.uid,
+          active: true,
+          views: 0,
+        );
+
+        // Create listing in Firestore
+        final productId = await listingViewModel.createProduct(product);
+
+        if (productId != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Listing created successfully!'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          Navigator.pushReplacementNamed(context, '/my-listings');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${listingViewModel.error}'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating listing: $e'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } finally {
         setState(() {
           _isLoading = false;
         });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Listing created successfully!'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-
-        Navigator.pushReplacementNamed(context, '/my-listings');
-      });
+      }
     }
   }
 
@@ -135,7 +212,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   // Add Image Button
                   if (_images.length < 5)
                     GestureDetector(
-                      onTap: _addImage,
+                      onTap: _pickImage,
                       child: Container(
                         width: 100,
                         height: 100,
@@ -178,7 +255,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
                             image: DecorationImage(
-                              image: AssetImage(image),
+                              image: FileImage(image),
                               fit: BoxFit.cover,
                             ),
                           ),

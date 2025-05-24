@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart' show IconData;
 
 class AppNotification {
-  final int id;
+  final String id;
   final String type;
   final String title;
   final String description;

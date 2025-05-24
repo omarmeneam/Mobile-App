@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -25,14 +24,15 @@ class AppColors {
 // Define the list of items for the carousel
 final List<Map<String, String>> carouselItemsData = [
   {'name': 'Books', 'imageUrl': 'assets/images/books.png'},
-  {'name': 'Watch', 'imageUrl': 'assets/images/watches.png'},
-  {'name': 'Armchair', 'imageUrl': 'assets/images/home-decor.png'},
-  {'name': 'Hoodie', 'imageUrl': 'assets/images/shirt.png'},
-  {'name': 'Microwave', 'imageUrl': 'assets/images/microwave.png'},
-  {'name': 'Laptop', 'imageUrl': 'assets/images/laptop.png'},
-  {'name': 'Headphones', 'imageUrl': 'assets/images/headset.png'},
-  {'name': 'Sneakers', 'imageUrl': 'assets/images/sneaker.png'},
+  {'name': 'Accessories', 'imageUrl': 'assets/images/watches.png'}, // Watch
+  {'name': 'Home Decor', 'imageUrl': 'assets/images/home-decor.png'}, // Armchair
+  {'name': 'Clothing', 'imageUrl': 'assets/images/shirt.png'}, // Hoodie
+  {'name': 'Appliances', 'imageUrl': 'assets/images/microwave.png'}, // Microwave
+  {'name': 'Electronics', 'imageUrl': 'assets/images/laptop.png'}, // Laptop
+  {'name': 'Audio', 'imageUrl': 'assets/images/headset.png'}, // Headphones
+  {'name': 'Footwear', 'imageUrl': 'assets/images/sneaker.png'}, // Sneakers
 ];
+
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/admin_product_card.dart';
 import '../../models/product.dart';
@@ -13,263 +14,219 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Mock stats data
-  final List<Map<String, dynamic>> _stats = [
-    {
-      'title': 'Total Users',
-      'value': '1,234',
-      'change': '+12%',
-      'icon': Icons.people,
-    },
-    {
-      'title': 'Active Listings',
-      'value': '856',
-      'change': '+5%',
-      'icon': Icons.inventory_2,
-    },
-    {'title': 'Reports', 'value': '23', 'change': '-8%', 'icon': Icons.flag},
-    {
-      'title': 'Transactions',
-      'value': '432',
-      'change': '+18%',
-      'icon': Icons.bar_chart,
-    },
-  ];
+  // Stats data
+  Map<String, dynamic> _stats = {
+    'totalUsers': 0,
+    'activeListings': 0,
+    'reports': 0,
+    'transactions': 0,
+  };
 
-  // Mock pending listings data
-  final List<Product> _pendingListings = [
-    Product(
-      id: 1,
-      title: 'Fake Designer Bag',
-      price: 150.0,
-      description: 'Counterfeit designer bag being sold as authentic. This violates our marketplace policies.',
-      image: 'https://images.unsplash.com/photo-1584917865442-de89df41a97a?q=80&w=800',
-      category: 'Fashion',
-      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-      seller: Seller(
-        id: 101,
-        name: 'John Doe',
-        avatar: 'https://randomuser.me/api/portraits/men/42.jpg',
-        rating: 4.2,
-        joinedDate: 'Jan 2024',
-      ),
-    ),
-    Product(
-      id: 2,
-      title: 'Exam Answer Key',
-      price: 50.0,
-      description: 'Selling academic materials not allowed. This is an exam answer key from professor Smith.',
-      image: 'https://images.unsplash.com/photo-1588580000645-5661c9f2ddcc?q=80&w=800',
-      category: 'Books',
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      seller: Seller(
-        id: 102,
-        name: 'Jane Smith',
-        avatar: 'https://randomuser.me/api/portraits/women/33.jpg',
-        rating: 3.8,
-        joinedDate: 'Feb 2024',
-      ),
-    ),
-    Product(
-      id: 3,
-      title: 'Research Paper Writing Service',
-      price: 120.0,
-      description: 'Will write your research paper or essay for you. 100% guaranteed good grade.',
-      image: 'https://images.unsplash.com/photo-1532153955177-f59af40d6472?q=80&w=800',
-      category: 'Services',
-      createdAt: DateTime.now().subtract(const Duration(hours: 8)),
-      seller: Seller(
-        id: 103,
-        name: 'Alex Wilson',
-        avatar: 'https://randomuser.me/api/portraits/men/48.jpg',
-        rating: 4.6,
-        joinedDate: 'Dec 2023',
-      ),
-    ),
-    Product(
-      id: 4,
-      title: 'Alcohol for Under 21',
-      price: 75.0,
-      description: 'Premium spirits and beer for campus delivery. No ID required.',
-      image: 'https://images.unsplash.com/photo-1597290282695-edc43d0e7129?q=80&w=800',
-      category: 'Food & Drinks',
-      createdAt: DateTime.now().subtract(const Duration(hours: 12)),
-      seller: Seller(
-        id: 104,
-        name: 'Mike Johnson',
-        avatar: 'https://randomuser.me/api/portraits/men/67.jpg',
-        rating: 3.9,
-        joinedDate: 'Mar 2024',
-      ),
-    ),
-  ];
+  // Pending listings
+  List<Product> _pendingListings = [];
 
-  // Mock user data
-  final List<Map<String, dynamic>> _users = [
-    {
-      'id': 1,
-      'name': 'John Doe',
-      'email': 'john.doe@university.edu',
-      'avatar': 'https://randomuser.me/api/portraits/men/42.jpg',
-      'status': 'Active',
-      'joinDate': 'Jan 15, 2024',
-      'listings': 8,
-      'reports': 2,
-    },
-    {
-      'id': 2,
-      'name': 'Jane Smith',
-      'email': 'jane.smith@university.edu',
-      'avatar': 'https://randomuser.me/api/portraits/women/33.jpg',
-      'status': 'Active',
-      'joinDate': 'Feb 23, 2024',
-      'listings': 5,
-      'reports': 1,
-    },
-    {
-      'id': 3,
-      'name': 'Mike Johnson',
-      'email': 'mike.johnson@university.edu',
-      'avatar': 'https://randomuser.me/api/portraits/men/67.jpg',
-      'status': 'Warning',
-      'joinDate': 'Mar 10, 2024',
-      'listings': 12,
-      'reports': 3,
-    },
-    {
-      'id': 4,
-      'name': 'Sarah Davis',
-      'email': 'sarah.davis@university.edu',
-      'avatar': 'https://randomuser.me/api/portraits/women/42.jpg',
-      'status': 'Suspended',
-      'joinDate': 'Dec 5, 2023',
-      'listings': 0,
-      'reports': 5,
-    },
-  ];
+  // Reports
+  List<Map<String, dynamic>> _reports = [];
 
-  // Mock reports data
-  final List<Map<String, dynamic>> _reports = [
-    {
-      'id': 1,
-      'type': 'Counterfeit Item',
-      'productId': 101,
-      'productTitle': 'Fake Designer Bag',
-      'reportedBy': 'User #458',
-      'date': 'Apr 12, 2024',
-      'status': 'Pending',
-    },
-    {
-      'id': 2,
-      'type': 'Academic Fraud',
-      'productId': 102,
-      'productTitle': 'Exam Answer Key',
-      'reportedBy': 'User #221',
-      'date': 'Apr 11, 2024',
-      'status': 'Pending',
-    },
-    {
-      'id': 3,
-      'type': 'Inappropriate Content',
-      'productId': 98,
-      'productTitle': 'Dorm Party Services',
-      'reportedBy': 'User #345',
-      'date': 'Apr 10, 2024',
-      'status': 'Resolved',
-    },
-    {
-      'id': 4,
-      'type': 'Scam',
-      'productId': 87,
-      'productTitle': 'iPhone 13 Pro (Broken)',
-      'reportedBy': 'User #512',
-      'date': 'Apr 9, 2024',
-      'status': 'Resolved',
-    },
-  ];
+  // Banned users
+  List<Map<String, dynamic>> _bannedUsers = [];
 
-  // Mock banned users data
-  final List<Map<String, dynamic>> _bannedUsers = [
-    {
-      'id': 5,
-      'name': 'Sarah Davis',
-      'email': 'sarah.davis@university.edu',
-      'avatar': 'https://randomuser.me/api/portraits/women/42.jpg',
-      'status': 'Banned',
-      'joinDate': 'Dec 5, 2023',
-      'banDate': 'Apr 10, 2024',
-      'banReason': 'Multiple policy violations (5 reports)',
-    },
-    {
-      'id': 6,
-      'name': 'Alex Wilson',
-      'email': 'alex.wilson@university.edu',
-      'avatar': 'https://randomuser.me/api/portraits/men/48.jpg',
-      'status': 'Banned',
-      'joinDate': 'Dec 13, 2023',
-      'banDate': 'Apr 12, 2024',
-      'banReason': 'Selling counterfeit items',
-    },
-  ];
-
-  void _handleApprovePost(int productId) {
-    setState(() {
-      _pendingListings.removeWhere((product) => product.id == productId);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Post approved successfully'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _loadData();
   }
 
-  void _handleTakeDownPost(int productId) {
-    setState(() {
-      _pendingListings.removeWhere((product) => product.id == productId);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Post taken down and warning sent to user'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+  Future<void> _loadData() async {
+    await Future.wait([
+      _loadStats(),
+      _loadPendingListings(),
+      _loadReports(),
+      _loadBannedUsers(),
+    ]);
   }
 
-  void _handleBanUser(int productId) {
-    final product = _pendingListings.firstWhere((p) => p.id == productId);
-    
-    // Add the user to banned users list
-    if (product.seller != null) {
-      final newBannedUser = {
-        'id': product.seller!.id,
-        'name': product.seller!.name,
-        'email': '${product.seller!.name.toLowerCase().replaceAll(' ', '.')}@university.edu',
-        'avatar': product.seller!.avatar,
-        'status': 'Banned',
-        'joinDate': product.seller!.joinedDate,
-        'banDate': DateTime.now().toString().substring(0, 10),
-        'banReason': 'Violating marketplace policies with listing: ${product.title}',
-      };
-      
-      setState(() {
-        _bannedUsers.add(newBannedUser);
-        _pendingListings.removeWhere((p) => p.id == productId);
-      });
-    } else {
-      setState(() {
-        _pendingListings.removeWhere((p) => p.id == productId);
-      });
+  Future<void> _loadStats() async {
+    try {
+      final statsDoc = await _firestore.collection('admin').doc('stats').get();
+      if (statsDoc.exists) {
+        setState(() {
+          _stats = statsDoc.data()!;
+        });
+      }
+    } catch (e) {
+      print('Error loading stats: $e');
     }
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('User ${product.seller?.name} has been banned'),
-        duration: const Duration(seconds: 2),
-        backgroundColor: Colors.red,
-      ),
-    );
+  }
+
+  Future<void> _loadPendingListings() async {
+    try {
+      final snapshot =
+          await _firestore
+              .collection('products')
+              .where('status', isEqualTo: 'pending')
+              .get();
+
+      setState(() {
+        _pendingListings =
+            snapshot.docs
+                .map((doc) => Product.fromMap(doc.id, doc.data()))
+                .toList();
+      });
+    } catch (e) {
+      print('Error loading pending listings: $e');
+    }
+  }
+
+  Future<void> _loadReports() async {
+    try {
+      final snapshot =
+          await _firestore
+              .collection('reports')
+              .orderBy('timestamp', descending: true)
+              .get();
+
+      setState(() {
+        _reports =
+            snapshot.docs.map((doc) {
+              final data = doc.data();
+              return {
+                'id': doc.id,
+                'type': data['type'],
+                'productId': data['productId'],
+                'productTitle': data['productTitle'],
+                'reportedBy': data['reportedBy'],
+                'date': data['timestamp'],
+                'status': data['status'],
+              };
+            }).toList();
+      });
+    } catch (e) {
+      print('Error loading reports: $e');
+    }
+  }
+
+  Future<void> _loadBannedUsers() async {
+    try {
+      final snapshot =
+          await _firestore
+              .collection('users')
+              .where('status', isEqualTo: 'banned')
+              .get();
+
+      setState(() {
+        _bannedUsers =
+            snapshot.docs.map((doc) {
+              final data = doc.data();
+              return {
+                'id': doc.id,
+                'name': data['name'],
+                'email': data['email'],
+                'avatar': data['avatar'],
+                'status': 'Banned',
+                'joinDate': data['joinDate'],
+                'banDate': data['banDate'],
+                'banReason': data['banReason'],
+              };
+            }).toList();
+      });
+    } catch (e) {
+      print('Error loading banned users: $e');
+    }
+  }
+
+  void _handleApprovePost(String productId) async {
+    try {
+      await _firestore.collection('products').doc(productId).update({
+        'status': 'active',
+      });
+
+      setState(() {
+        _pendingListings.removeWhere((product) => product.id == productId);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Post approved successfully'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error approving post: $e'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _handleTakeDownPost(String productId) async {
+    try {
+      await _firestore.collection('products').doc(productId).update({
+        'status': 'removed',
+      });
+
+      setState(() {
+        _pendingListings.removeWhere((product) => product.id == productId);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Post taken down and warning sent to user'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error taking down post: $e'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _handleBanUser(String productId) async {
+    try {
+      final product = _pendingListings.firstWhere((p) => p.id == productId);
+
+      await _firestore.collection('users').doc(product.sellerId).update({
+        'status': 'banned',
+        'banDate': FieldValue.serverTimestamp(),
+        'banReason':
+            'Violating marketplace policies with listing: ${product.title}',
+      });
+
+      setState(() {
+        _pendingListings.removeWhere((p) => p.id == productId);
+        _loadBannedUsers(); // Reload banned users
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('User has been banned'),
+          duration: const Duration(seconds: 2),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error banning user: $e'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Color _getStatusColor(String status) {
@@ -287,18 +244,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       default:
         return Colors.grey;
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Color _getStatColor(int index) {
@@ -406,15 +351,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             ),
           ),
           const SizedBox(height: 24),
-          
+
           Text(
             'Dashboard Overview',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-          
+
           // Stats Grid
           LayoutBuilder(
             builder: (context, constraints) {
@@ -429,8 +374,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 ),
                 itemCount: _stats.length,
                 itemBuilder: (context, index) {
-                  final stat = _stats[index];
-                  final isPositive = stat['change'].startsWith('+');
+                  final stat = _stats.values.toList()[index];
+                  final isPositive = stat.toString().startsWith('+');
 
                   return Card(
                     shape: RoundedRectangleBorder(
@@ -444,13 +389,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            stat['icon'],
+                            Icons.bar_chart,
                             size: 24,
                             color: _getStatColor(index),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            stat['title'],
+                            _stats.keys.toList()[index],
                             style: Theme.of(context).textTheme.titleSmall,
                             textAlign: TextAlign.center,
                           ),
@@ -458,10 +403,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
-                              stat['value'],
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              stat.toString(),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -469,13 +413,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                isPositive ? Icons.arrow_upward : Icons.arrow_downward,
+                                isPositive
+                                    ? Icons.arrow_upward
+                                    : Icons.arrow_downward,
                                 size: 12,
                                 color: isPositive ? Colors.green : Colors.red,
                               ),
                               const SizedBox(width: 2),
                               Text(
-                                stat['change'],
+                                isPositive ? '+' : '-',
                                 style: TextStyle(
                                   color: isPositive ? Colors.green : Colors.red,
                                   fontWeight: FontWeight.bold,
@@ -490,7 +436,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   );
                 },
               );
-            }
+            },
           ),
           const SizedBox(height: 24),
         ],
@@ -534,9 +480,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         const SizedBox(height: 4),
                         Text(
                           '${_pendingListings.length} items need your attention',
-                          style: TextStyle(
-                            color: Colors.orange[700],
-                          ),
+                          style: TextStyle(color: Colors.orange[700]),
                         ),
                       ],
                     ),
@@ -563,67 +507,61 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             ],
           ),
           const SizedBox(height: 8),
-          
+
           _pendingListings.isEmpty
               ? SizedBox(
-                  height: 200,
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.check_circle_outline,
-                          size: 48,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No pending posts',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : Padding(
-                  padding: const EdgeInsets.only(bottom: 32.0),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.58,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 20,
-                    ),
-                    itemCount: _pendingListings.length,
-                    itemBuilder: (context, index) {
-                      final product = _pendingListings[index];
-                      return AdminProductCard(
-                        product: product,
-                        onTap: () {
-                          _showItemDetailDialog(context, product);
-                        },
-                        onApprove: () => _handleApprovePost(product.id),
-                        onTakeDown: () => _handleTakeDownPost(product.id),
-                        onBanUser: () => _handleBanUser(product.id),
-                      );
-                    },
+                height: 200,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.check_circle_outline,
+                        size: 48,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No pending posts',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                      ),
+                    ],
                   ),
                 ),
+              )
+              : Padding(
+                padding: const EdgeInsets.only(bottom: 32.0),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.58,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 20,
+                  ),
+                  itemCount: _pendingListings.length,
+                  itemBuilder: (context, index) {
+                    final product = _pendingListings[index];
+                    return AdminProductCard(
+                      product: product,
+                      onTap: () {
+                        _showItemDetailDialog(context, product);
+                      },
+                      onApprove: () => _handleApprovePost(product.id),
+                      onTakeDown: () => _handleTakeDownPost(product.id),
+                      onBanUser: () => _handleBanUser(product.id),
+                    );
+                  },
+                ),
+              ),
 
           const SizedBox(height: 24),
 
           // Reports Section
-          Text(
-            'Recent Reports',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text('Recent Reports', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 16),
-          
+
           Card(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -640,10 +578,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     backgroundColor: _getStatusColor(report['status']),
                     child: Text(
                       '#${report['id']}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                      ),
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
                     ),
                   ),
                   title: Text(report['productTitle']),
@@ -651,10 +586,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   trailing: Chip(
                     label: Text(
                       report['status'],
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                      ),
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
                     ),
                     backgroundColor: _getStatusColor(report['status']),
                     padding: EdgeInsets.zero,
@@ -689,15 +621,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               ),
             ),
           ),
-          
+
           // Tab Bar
           const TabBar(
-            tabs: [
-              Tab(text: 'Active Users'),
-              Tab(text: 'Banned Users'),
-            ],
+            tabs: [Tab(text: 'Active Users'), Tab(text: 'Banned Users')],
           ),
-          
+
           // Tab Views
           Expanded(
             child: TabBarView(
@@ -723,7 +652,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         ],
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // User List
                       Card(
                         shape: RoundedRectangleBorder(
@@ -732,10 +661,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         child: ListView.separated(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _users.length,
-                          separatorBuilder: (context, index) => const Divider(height: 1),
+                          itemCount: _bannedUsers.length,
+                          separatorBuilder:
+                              (context, index) => const Divider(height: 1),
                           itemBuilder: (context, index) {
-                            final user = _users[index];
+                            final user = _bannedUsers[index];
                             return ListTile(
                               leading: CircleAvatar(
                                 backgroundImage: NetworkImage(user['avatar']),
@@ -763,7 +693,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   ),
                                 ],
                               ),
-                              subtitle: Text('${user['email']} • Joined ${user['joinDate']}'),
+                              subtitle: Text(
+                                '${user['email']} • Joined ${user['joinDate']}',
+                              ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -780,7 +712,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                           '${user['reports']} reports',
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: user['reports'] > 2 ? Colors.red : Colors.orange,
+                                            color:
+                                                user['reports'] > 2
+                                                    ? Colors.red
+                                                    : Colors.orange,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
@@ -798,7 +733,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     ],
                   ),
                 ),
-                
+
                 // Banned Users Tab
                 SingleChildScrollView(
                   padding: const EdgeInsets.all(16.0),
@@ -827,7 +762,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Banned User List
                       Card(
                         shape: RoundedRectangleBorder(
@@ -837,7 +772,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: _bannedUsers.length,
-                          separatorBuilder: (context, index) => const Divider(height: 1),
+                          separatorBuilder:
+                              (context, index) => const Divider(height: 1),
                           itemBuilder: (context, index) {
                             final user = _bannedUsers[index];
                             return ListTile(
@@ -845,7 +781,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                               leading: Stack(
                                 children: [
                                   CircleAvatar(
-                                    backgroundImage: NetworkImage(user['avatar']),
+                                    backgroundImage: NetworkImage(
+                                      user['avatar'],
+                                    ),
                                   ),
                                   Positioned(
                                     right: 0,
@@ -855,7 +793,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                       decoration: BoxDecoration(
                                         color: Colors.red,
                                         shape: BoxShape.circle,
-                                        border: Border.all(color: Colors.white, width: 1),
+                                        border: Border.all(
+                                          color: Colors.white,
+                                          width: 1,
+                                        ),
                                       ),
                                       child: const Icon(
                                         Icons.block,
@@ -870,7 +811,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('${user['email']} • Banned on ${user['banDate']}'),
+                                  Text(
+                                    '${user['email']} • Banned on ${user['banDate']}',
+                                  ),
                                   const SizedBox(height: 2),
                                   Text(
                                     'Reason: ${user['banReason']}',
@@ -887,36 +830,49 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   // Show an unban confirmation dialog
                                   showDialog(
                                     context: context,
-                                    builder: (context) => AlertDialog(
-                                      title: const Text('Unban User?'),
-                                      content: Text('Are you sure you want to unban ${user['name']}?'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(context),
-                                          child: const Text('Cancel'),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed: () {
-                                            // Implement unban logic here
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(
-                                                content: Text('${user['name']} has been unbanned'),
+                                    builder:
+                                        (context) => AlertDialog(
+                                          title: const Text('Unban User?'),
+                                          content: Text(
+                                            'Are you sure you want to unban ${user['name']}?',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed:
+                                                  () => Navigator.pop(context),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () {
+                                                // Implement unban logic here
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      '${user['name']} has been unbanned',
+                                                    ),
+                                                    backgroundColor:
+                                                        Colors.green,
+                                                  ),
+                                                );
+                                                Navigator.pop(context);
+                                              },
+                                              style: ElevatedButton.styleFrom(
                                                 backgroundColor: Colors.green,
                                               ),
-                                            );
-                                            Navigator.pop(context);
-                                          },
-                                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                                          child: const Text('Unban'),
+                                              child: const Text('Unban'),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
                                   );
                                 },
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.green,
                                   side: const BorderSide(color: Colors.green),
-                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
                                 ),
                                 child: const Text('Unban'),
                               ),
@@ -939,133 +895,141 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   void _showItemDetailDialog(BuildContext context, Product product) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Item Details'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (product.image.startsWith('http'))
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    product.image,
-                    height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Item Details'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (product.image.startsWith('http'))
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        product.image,
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  else
+                    const SizedBox.shrink(),
+                  const SizedBox(height: 16),
+                  Text(
+                    product.title,
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
-                )
-              else
-                const SizedBox.shrink(),
-              const SizedBox(height: 16),
-              Text(
-                product.title,
-                style: Theme.of(context).textTheme.titleLarge,
+                  const SizedBox(height: 8),
+                  Text(
+                    'RM ${product.price.toStringAsFixed(2)}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Description',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(product.description),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Seller Information',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      if (product.seller?.avatar != null)
+                        CircleAvatar(
+                          backgroundImage:
+                              (product.seller!.avatar.startsWith('http'))
+                                  ? NetworkImage(product.seller!.avatar)
+                                  : null,
+                          radius: 20,
+                        ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            product.seller?.name ?? 'Unknown',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            'Member since ${product.seller?.joinedDate ?? 'unknown'}',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Reason for Review',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: const Text(
+                      'This listing may violate marketplace policies. Please review the content and make a moderation decision.',
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                'RM ${product.price.toStringAsFixed(2)}',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Description',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(product.description),
-              const SizedBox(height: 16),
-              const Text(
-                'Seller Information',
-                style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            actions: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Close'),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  if (product.seller?.avatar != null)
-                    CircleAvatar(
-                      backgroundImage: (product.seller!.avatar.startsWith('http'))
-                        ? NetworkImage(product.seller!.avatar)
-                        : null,
-                      radius: 20,
-                    ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product.seller?.name ?? 'Unknown',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _handleTakeDownPost(product.id);
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
                       ),
-                      Text('Member since ${product.seller?.joinedDate ?? 'unknown'}'),
-                    ],
+                      child: const Text('Take Down'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _handleApprovePost(product.id);
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
+                      child: const Text('Approve'),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Reason for Review',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red[50],
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: Colors.red.shade200),
-                ),
-                child: const Text(
-                  'This listing may violate marketplace policies. Please review the content and make a moderation decision.',
-                ),
-              ),
             ],
           ),
-        ),
-        actions: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Close'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    _handleTakeDownPost(product.id);
-                    Navigator.pop(context);
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  child: const Text('Take Down'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    _handleApprovePost(product.id);
-                    Navigator.pop(context);
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                  child: const Text('Approve'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }

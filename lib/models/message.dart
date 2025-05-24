@@ -1,11 +1,10 @@
-import 'product.dart';
-import 'user.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Message {
-  final int id;
+  final String id;
   final String sender;
   final String text;
-  final String time;
+  final DateTime time;
 
   Message({
     required this.id,
@@ -13,18 +12,17 @@ class Message {
     required this.text,
     required this.time,
   });
-}
 
-class Conversation {
-  final int id;
-  final User user;
-  final Message lastMessage;
-  final Product product;
+  factory Message.fromMap(String id, Map<String, dynamic> map) {
+    return Message(
+      id: id,
+      sender: map['sender'] as String,
+      text: map['text'] as String,
+      time: (map['timestamp'] as Timestamp).toDate(),
+    );
+  }
 
-  Conversation({
-    required this.id,
-    required this.user,
-    required this.lastMessage,
-    required this.product,
-  });
+  Map<String, dynamic> toMap() {
+    return {'sender': sender, 'text': text, 'timestamp': time};
+  }
 }

@@ -19,7 +19,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
     super.initState();
     // Load conversations when the screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<MessagesViewModel>(context, listen: false).loadConversations();
+      Provider.of<MessagesViewModel>(
+        context,
+        listen: false,
+      ).loadConversations();
     });
   }
 
@@ -59,176 +62,222 @@ class _MessagesScreenState extends State<MessagesScreen> {
               },
             ),
           ),
-          body: viewModel.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : viewModel.error.isNotEmpty
+          body:
+              viewModel.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : viewModel.error.isNotEmpty
                   ? Center(child: Text(viewModel.error))
                   : viewModel.conversations.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.message_outlined,
-                                size: 64,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No messages yet',
-                                style: TextStyle(color: Colors.grey[600]),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'When you contact a seller or receive messages, they\'ll appear here',
-                                style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
+                  ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.message_outlined,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No messages yet',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'When you contact a seller or receive messages, they\'ll appear here',
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 12,
                           ),
-                        )
-                      : ListView.builder(
-                          itemCount: viewModel.conversations.length,
-                          itemBuilder: (context, index) {
-                            final conversation = viewModel.conversations[index];
-                            final isUnread = conversation.lastMessage.sender != 'You';
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  )
+                  : ListView.builder(
+                    itemCount: viewModel.conversations.length,
+                    itemBuilder: (context, index) {
+                      final conversation = viewModel.conversations[index];
+                      final isUnread = conversation.lastMessage.sender != 'You';
 
-                            return InkWell(
-                              onTap: () {
-                                // Set current conversation ID and navigate to chat screen
-                                viewModel.loadMessages(conversation.id);
-                                Navigator.pushNamed(
-                                  context,
-                                  '/messages/${conversation.user.uid}',
-                                );
-                              },
-                              child: Container(
-                                color: isUnread ? AppColors.accent.withOpacity(0.1) : null,
-                                child: Column(
+                      return InkWell(
+                        onTap: () {
+                          // Set current conversation ID and navigate to chat screen
+                          viewModel.loadMessages(conversation.id);
+                          Navigator.pushNamed(
+                            context,
+                            '/messages/${conversation.user.uid}',
+                          );
+                        },
+                        child: Container(
+                          color:
+                              isUnread
+                                  ? AppColors.accent.withOpacity(0.1)
+                                  : null,
+                          child: Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Padding(
-                                      padding: const EdgeInsets.all(16.0),
-                                      child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          // User Avatar with Online Indicator
-                                          Stack(
-                                            children: [
-                                              CircleAvatar(
-                                                radius: 24,
-                                                backgroundImage: AssetImage(
-                                                  conversation.user.avatar,
+                                    // User Avatar with Online Indicator
+                                    Stack(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 24,
+                                          backgroundImage: AssetImage(
+                                            conversation.user.avatar,
+                                          ),
+                                        ),
+                                        if (conversation.user.online)
+                                          Positioned(
+                                            right: 0,
+                                            bottom: 0,
+                                            child: Container(
+                                              width: 12,
+                                              height: 12,
+                                              decoration: BoxDecoration(
+                                                color: Colors.green,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 2,
                                                 ),
                                               ),
-                                              if (conversation.user.online)
-                                                Positioned(
-                                                  right: 0,
-                                                  bottom: 0,
-                                                  child: Container(
-                                                    width: 12,
-                                                    height: 12,
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.green,
-                                                      shape: BoxShape.circle,
-                                                      border: Border.all(
-                                                        color: Colors.white,
-                                                        width: 2,
-                                                      ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(width: 16),
+
+                                    // Message Content
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          // User Name and Time
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                conversation.user.name,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleMedium
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          isUnread
+                                                              ? FontWeight.bold
+                                                              : FontWeight
+                                                                  .normal,
                                                     ),
-                                                  ),
+                                              ),
+                                              Text(
+                                                _formatTime(
+                                                  conversation.lastMessage.time,
                                                 ),
+                                                style: TextStyle(
+                                                  color:
+                                                      isUnread
+                                                          ? AppColors.primary
+                                                          : Colors.grey,
+                                                  fontWeight:
+                                                      isUnread
+                                                          ? FontWeight.bold
+                                                          : FontWeight.normal,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
                                             ],
                                           ),
-                                          const SizedBox(width: 16),
+                                          const SizedBox(height: 4),
 
-                                          // Message Content
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                // User Name and Time
-                                                Row(
-                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                  children: [
-                                                    Text(
-                                                      conversation.user.name,
-                                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                            fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
-                                                          ),
-                                                    ),
-                                                    Text(
-                                                      conversation.lastMessage.time,
-                                                      style: TextStyle(
-                                                        color: isUnread ? AppColors.primary : Colors.grey,
-                                                        fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
-                                                        fontSize: 12,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                const SizedBox(height: 4),
+                                          // Last Message
+                                          Text(
+                                            '${conversation.lastMessage.sender == "You" ? "You: " : ""}${conversation.lastMessage.text}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color:
+                                                  isUnread
+                                                      ? Colors.black
+                                                      : Colors.grey[600],
+                                              fontWeight:
+                                                  isUnread
+                                                      ? FontWeight.bold
+                                                      : FontWeight.normal,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
 
-                                                // Last Message
-                                                Text(
-                                                  '${conversation.lastMessage.sender == "You" ? "You: " : ""}${conversation.lastMessage.text}',
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: TextStyle(
-                                                    color: isUnread ? Colors.black : Colors.grey[600],
-                                                    fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
+                                          // Product Info
+                                          Row(
+                                            children: [
+                                              Container(
+                                                width: 40,
+                                                height: 40,
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                  image: DecorationImage(
+                                                    image: AssetImage(
+                                                      conversation
+                                                          .product
+                                                          .image,
+                                                    ),
+                                                    fit: BoxFit.cover,
                                                   ),
                                                 ),
-                                                const SizedBox(height: 8),
-
-                                                // Product Info
-                                                Row(
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    Container(
-                                                      width: 40,
-                                                      height: 40,
-                                                      decoration: BoxDecoration(
-                                                        borderRadius: BorderRadius.circular(4),
-                                                        image: DecorationImage(
-                                                          image: AssetImage(conversation.product.image),
-                                                          fit: BoxFit.cover,
-                                                        ),
-                                                      ),
+                                                    Text(
+                                                      conversation
+                                                          .product
+                                                          .title,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style:
+                                                          Theme.of(
+                                                            context,
+                                                          ).textTheme.bodySmall,
                                                     ),
-                                                    const SizedBox(width: 8),
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        children: [
-                                                          Text(
-                                                            conversation.product.title,
-                                                            maxLines: 1,
-                                                            overflow: TextOverflow.ellipsis,
-                                                            style: Theme.of(context).textTheme.bodySmall,
+                                                    Text(
+                                                      'RM ${conversation.product.price.toStringAsFixed(2)}',
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            fontWeight:
+                                                                FontWeight.bold,
                                                           ),
-                                                          Text(
-                                                            'RM ${conversation.product.price.toStringAsFixed(2)}',
-                                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                                  fontWeight: FontWeight.bold,
-                                                                ),
-                                                          ),
-                                                        ],
-                                                      ),
                                                     ),
                                                   ],
                                                 ),
-                                              ],
-                                            ),
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ),
                                     ),
-                                    const Divider(height: 1),
                                   ],
                                 ),
                               ),
-                            );
-                          },
+                              const Divider(height: 1),
+                            ],
+                          ),
                         ),
+                      );
+                    },
+                  ),
           bottomNavigationBar: BottomNavBar(
             currentIndex: _currentIndex,
             onTap: _onNavBarTap,
@@ -236,5 +285,26 @@ class _MessagesScreenState extends State<MessagesScreen> {
         );
       },
     );
+  }
+
+  String _formatTime(DateTime time) {
+    final now = DateTime.now();
+    final difference = now.difference(time);
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inHours < 1) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inDays < 1) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inDays < 30) {
+      return '${(difference.inDays / 7).floor()}w ago';
+    } else if (difference.inDays < 365) {
+      return '${(difference.inDays / 30).floor()}mo ago';
+    } else {
+      return '${(difference.inDays / 365).floor()}y ago';
+    }
   }
 }

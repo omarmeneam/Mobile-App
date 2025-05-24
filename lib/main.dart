@@ -2,10 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:image_picker/image_picker.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
+import 'models/user.dart';
+import 'models/product.dart';
 import 'views/auth/sign_in_screen.dart';
 import 'views/home/home_screen.dart';
 import 'views/product/product_detail_screen.dart';
@@ -32,8 +35,7 @@ import 'viewmodels/notifications_viewmodel.dart';
 class CustomErrorWidget extends StatelessWidget {
   final FlutterErrorDetails errorDetails;
 
-  const CustomErrorWidget({Key? key, required this.errorDetails})
-    : super(key: key);
+  const CustomErrorWidget({super.key, required this.errorDetails});
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +93,13 @@ void main() async {
         // Initialize Firebase
         await Firebase.initializeApp(
           options: DefaultFirebaseOptions.currentPlatform,
+        );
+
+        // Initialize Firebase App Check
+        await FirebaseAppCheck.instance.activate(
+          // Use debug provider for development
+          androidProvider: AndroidProvider.playIntegrity,
+          appleProvider: AppleProvider.appAttest,
         );
 
         // Pre-initialize ImagePicker to test if it works
@@ -164,15 +173,40 @@ class MyApp extends StatelessWidget {
         },
         onGenerateRoute: (settings) {
           if (settings.name?.startsWith('/product/') ?? false) {
-            final productId = int.parse(settings.name!.split('/')[2]);
+            final productId = settings.name!.split('/')[2];
             return MaterialPageRoute(
               builder: (context) => ProductDetailScreen(productId: productId),
             );
           }
           if (settings.name?.startsWith('/messages/') ?? false) {
-            final userId = int.parse(settings.name!.split('/')[2]);
+            final conversationId = settings.name!.split('/')[2];
+            // TODO: Get user and product data from conversation
             return MaterialPageRoute(
-              builder: (context) => ChatScreen(userId: userId),
+              builder:
+                  (context) => ChatScreen(
+                    conversationId: conversationId,
+                    user: User(
+                      uid: 'temp_user_id',
+                      name: 'Loading...',
+                      email: '',
+                      avatar: 'assets/images/default_avatar.png',
+                      online: false,
+                    ),
+                    product: Product(
+                      id: 'temp_product_id',
+                      title: 'Loading...',
+                      price: 0,
+                      description: '',
+                      image: 'assets/images/placeholder.png',
+                      images: ['assets/images/placeholder.png'],
+                      category: '',
+                      condition: '',
+                      createdAt: DateTime.now(),
+                      sellerId: '',
+                      active: true,
+                      views: 0,
+                    ),
+                  ),
             );
           }
           return null;
