@@ -4,6 +4,7 @@ import '../../models/product.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../theme/app_colors.dart';
 import '../../viewmodels/listing_viewmodel.dart';
+import 'edit_listing_screen.dart';
 
 class MyListingsScreen extends StatefulWidget {
   const MyListingsScreen({super.key});
@@ -184,7 +185,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '\$${listing.price.toStringAsFixed(2)}',
+                            '\RM ${listing.price.toStringAsFixed(2)}',
                             style: TextStyle(
                               fontSize: 16,
                               color: AppColors.primary,
@@ -194,20 +195,20 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              Icon(
-                                Icons.remove_red_eye,
-                                size: 16,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${listing.views} views',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
+                              // Icon(
+                              //   Icons.remove_red_eye,
+                              //   size: 16,
+                              //   color: Colors.grey[600],
+                              // ),
+                              // const SizedBox(width: 4),
+                              // Text(
+                              //   '${listing.views} views',
+                              //   style: TextStyle(
+                              //     color: Colors.grey[600],
+                              //     fontSize: 12,
+                              //   ),
+                              // ),
+                              // const SizedBox(width: 16),
                               Icon(
                                 Icons.access_time,
                                 size: 16,
@@ -234,7 +235,14 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                         children: [
                           TextButton.icon(
                             onPressed: () {
-                              // TODO: Implement edit functionality
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) =>
+                                          EditListingScreen(product: listing),
+                                ),
+                              );
                             },
                             icon: const Icon(Icons.edit),
                             label: const Text('Edit'),

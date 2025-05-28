@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
+import '../widgets/notification_badge.dart';
+import '../services/notification_service.dart';
 
-class BottomNavBar extends StatelessWidget {
+class BottomNavBar extends StatefulWidget {
   final int currentIndex;
   final Function(int) onTap;
 
@@ -11,34 +14,61 @@ class BottomNavBar extends StatelessWidget {
   });
 
   @override
+  _BottomNavBarState createState() => _BottomNavBarState();
+}
+
+class _BottomNavBarState extends State<BottomNavBar> {
+  final NotificationService _notificationService = NotificationService();
+  int _unreadCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUnreadCount();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    final count = await _notificationService.getUnreadCount();
+    if (mounted) {
+      setState(() {
+        _unreadCount = count;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
-      currentIndex: currentIndex,
-      onTap: onTap,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home_outlined),
-          activeIcon: Icon(Icons.home),
-          label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.search_outlined),
-          activeIcon: Icon(Icons.search),
+      currentIndex: widget.currentIndex,
+      onTap: widget.onTap,
+      type: BottomNavigationBarType.fixed,
+      selectedItemColor: AppColors.primary,
+      unselectedItemColor: Colors.grey,
+      items: [
+        const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.search),
           label: 'Search',
         ),
-        BottomNavigationBarItem(
+        const BottomNavigationBarItem(
           icon: Icon(Icons.add_circle_outline),
-          activeIcon: Icon(Icons.add_circle),
           label: 'Sell',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.favorite_border_outlined),
-          activeIcon: Icon(Icons.favorite),
+          icon: Stack(
+            children: [
+              const Icon(Icons.favorite),
+              Positioned(
+                right: 0,
+                top: 0,
+                child: NotificationBadge(count: _unreadCount),
+              ),
+            ],
+          ),
           label: 'Wishlist',
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          activeIcon: Icon(Icons.person),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.person),
           label: 'Profile',
         ),
       ],

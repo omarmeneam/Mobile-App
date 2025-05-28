@@ -3,6 +3,10 @@ import 'package:provider/provider.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../theme/app_colors.dart';
 import '../../viewmodels/wishlist_viewmodel.dart';
+import '../../models/product.dart';
+import '../../models/app_notification.dart';
+import '../../services/notification_service.dart';
+import '../../widgets/product_card.dart';
 
 class WishlistScreen extends StatefulWidget {
   const WishlistScreen({super.key});
@@ -13,6 +17,8 @@ class WishlistScreen extends StatefulWidget {
 
 class _WishlistScreenState extends State<WishlistScreen> {
   final int _currentIndex = 3;
+  final NotificationService _notificationService = NotificationService();
+  Map<String, List<ProductNotification>> _productNotifications = {};
 
   @override
   void initState() {
@@ -21,6 +27,63 @@ class _WishlistScreenState extends State<WishlistScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<WishlistViewModel>(context, listen: false).loadWishlist();
     });
+    _loadNotifications();
+  }
+
+  Future<void> _loadNotifications() async {
+    final wishlistViewModel = Provider.of<WishlistViewModel>(
+      context,
+      listen: false,
+    );
+    final notifications = <String, List<ProductNotification>>{};
+
+    print(
+      'Loading notifications for ${wishlistViewModel.wishlistItems.length} wishlist items',
+    );
+
+    for (final product in wishlistViewModel.wishlistItems) {
+      print(
+        'Checking notifications for product: ${product.title} (${product.id})',
+      );
+
+      // Get notifications for this product
+      final productNotifications = await _notificationService
+          .getProductNotifications(product.id);
+      print(
+        'Found ${productNotifications.length} notifications for ${product.title}',
+      );
+
+      if (productNotifications.isNotEmpty) {
+        notifications[product.id] = productNotifications;
+        print(
+          'Added notifications for ${product.title}: ${productNotifications.map((n) => n.message).join(', ')}',
+        );
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _productNotifications = notifications;
+        print(
+          'Updated _productNotifications with ${notifications.length} products having notifications',
+        );
+      });
+    }
+  }
+
+  Future<void> _handleProductTap(Product product) async {
+    // Mark notifications as read when product is tapped
+    await _notificationService.markProductNotificationsAsRead(product.id);
+
+    // Remove notifications from local state
+    setState(() {
+      _productNotifications.remove(product.id);
+    });
+
+    // Navigate to product details
+    if (mounted) {
+      Navigator.pushNamed(context, '/product/${product.id}');
+    }
   }
 
   void _onNavBarTap(int index) {
@@ -47,177 +110,145 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<WishlistViewModel>(
-      builder: (context, viewModel, child) {
-        return Scaffold(
-          appBar: AppBar(title: const Text('Wishlist')),
-          body: viewModel.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : viewModel.error.isNotEmpty
-                  ? Center(child: Text(viewModel.error))
-                  : Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+    return Material(
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          title: const Text('Wishlist'),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          foregroundColor: Colors.black,
+        ),
+        body: SafeArea(
+          child: Consumer<WishlistViewModel>(
+            builder: (context, viewModel, child) {
+              if (viewModel.isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (viewModel.wishlistItems.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.favorite_border,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Your wishlist is empty',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Add items to your wishlist to see them here',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async {
+                  await viewModel.loadWishlist();
+                  await _loadNotifications();
+                },
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: viewModel.wishlistItems.length,
+                  itemBuilder: (context, index) {
+                    final product = viewModel.wishlistItems[index];
+                    final notifications =
+                        _productNotifications[product.id] ?? [];
+
+                    print(
+                      'Building product card for ${product.title} with ${notifications.length} notifications',
+                    );
+
+                    return GestureDetector(
+                      onTap: () => _handleProductTap(product),
+                      child: Stack(
                         children: [
-                          Text(
-                            'Saved Items (${viewModel.wishlistItems.length})',
-                            style: Theme.of(context).textTheme.titleLarge,
+                          ProductCard(
+                            product: product,
+                            onTap: () => _handleProductTap(product),
                           ),
-                          const SizedBox(height: 16),
-
-                          Expanded(
-                            child: viewModel.wishlistItems.isEmpty
-                                ? Center(
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.favorite_border,
-                                          size: 64,
-                                          color: Colors.grey[400],
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          'Your wishlist is empty',
-                                          style: TextStyle(color: Colors.grey[600]),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        ElevatedButton(
-                                          onPressed: () {
-                                            Navigator.pushReplacementNamed(
-                                              context,
-                                              '/home',
-                                            );
-                                          },
-                                          child: const Text('Browse Items'),
-                                        ),
-                                      ],
+                          if (notifications.isNotEmpty)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      notifications.length.toString(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  )
-                                : ListView.builder(
-                                    itemCount: viewModel.wishlistItems.length,
-                                    itemBuilder: (context, index) {
-                                      final item = viewModel.wishlistItems[index];
-                                      return Card(
-                                        margin: const EdgeInsets.only(bottom: 16),
-                                        child: InkWell(
-                                          onTap: () {
-                                            Navigator.pushNamed(
-                                              context,
-                                              '/product/${item.id}',
-                                            );
-                                          },
-                                          child: Row(
-                                            children: [
-                                              // Product Image
-                                              SizedBox(
-                                                width: 100,
-                                                height: 100,
-                                                child: Image.asset(
-                                                  item.image,
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              ),
-
-                                              // Product Details
-                                              Expanded(
-                                                child: Padding(
-                                                  padding: const EdgeInsets.all(12.0),
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        item.title,
-                                                        style:
-                                                            Theme.of(
-                                                              context,
-                                                            ).textTheme.titleMedium,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                      const SizedBox(height: 4),
-                                                      Text(
-                                                        'RM ${item.price.toStringAsFixed(2)}',
-                                                        style:
-                                                            Theme.of(
-                                                              context,
-                                                            ).textTheme.titleLarge,
-                                                      ),
-                                                      const SizedBox(height: 4),
-                                                      Row(
-                                                        children: [
-                                                          Chip(
-                                                            label: Text(
-                                                              item.category,
-                                                              style:
-                                                                  Theme.of(
-                                                                    context,
-                                                                  ).textTheme.bodySmall,
-                                                            ),
-                                                            backgroundColor: AppColors
-                                                                .secondary
-                                                                .withOpacity(0.2),
-                                                          ),
-                                                          const SizedBox(width: 8),
-                                                          if (item.seller != null)
-                                                            Row(
-                                                              children: [
-                                                                CircleAvatar(
-                                                                  radius: 12,
-                                                                  backgroundImage:
-                                                                      AssetImage(
-                                                                          item.seller!.avatar),
-                                                                ),
-                                                                const SizedBox(width: 4),
-                                                                Text(
-                                                                  item.seller!.name,
-                                                                  style:
-                                                                      Theme.of(context)
-                                                                          .textTheme
-                                                                          .bodySmall,
-                                                                ),
-                                                              ],
-                                                            ),
-                                                        ],
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-
-                                              // Remove Button
-                                              IconButton(
-                                                icon: const Icon(Icons.favorite, color: Colors.red),
-                                                onPressed: () async {
-                                                  final success = await viewModel.removeFromWishlist(item.id);
-                                                  if (success) {
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      const SnackBar(
-                                                        content: Text('Removed from wishlist'),
-                                                        duration: Duration(seconds: 2),
-                                                      ),
-                                                    );
-                                                  }
-                                                },
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    },
+                                    const SizedBox(width: 4),
+                                    const Icon(
+                                      Icons.notifications,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          if (notifications.isNotEmpty)
+                            Positioned(
+                              bottom: 8,
+                              left: 8,
+                              right: 8,
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.7),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  notifications.first.message,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
                                   ),
-                          ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
-                    ),
-          bottomNavigationBar: BottomNavBar(
-            currentIndex: _currentIndex,
-            onTap: _onNavBarTap,
+                    );
+                  },
+                ),
+              );
+            },
           ),
-        );
-      },
+        ),
+        bottomNavigationBar: BottomNavBar(
+          currentIndex: _currentIndex,
+          onTap: _onNavBarTap,
+        ),
+      ),
     );
   }
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/product.dart';
 
 class WishlistViewModel extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   final String _collection = 'wishlists';
 
   List<Product> _wishlistItems = [];
@@ -22,17 +24,19 @@ class WishlistViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // TODO: Get current user ID from auth service
-      const currentUserId = 'current_user_id';
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
 
       final snapshot =
           await _firestore
               .collection(_collection)
-              .doc(currentUserId)
+              .doc(currentUser.uid)
               .collection('items')
               .get();
 
-      _wishlistItems = await Future.wait(
+      final List<Product?> products = await Future.wait(
         snapshot.docs.map((doc) async {
           final productData = doc.data();
           final productDoc =
@@ -40,9 +44,21 @@ class WishlistViewModel extends ChangeNotifier {
                   .collection('products')
                   .doc(productData['productId'])
                   .get();
+
+          // Skip if product doesn't exist or is inactive
+          if (!productDoc.exists || !(productDoc.data()?['active'] ?? false)) {
+            // Remove from wishlist if product is deleted or inactive
+            await doc.reference.delete();
+            return null;
+          }
+
           return Product.fromMap(productDoc.id, productDoc.data()!);
         }),
       );
+
+      // Remove null values (deleted/inactive products)
+      _wishlistItems =
+          products.where((item) => item != null).cast<Product>().toList();
     } catch (e) {
       _error = 'Failed to load wishlist: ${e.toString()}';
     } finally {
@@ -54,8 +70,10 @@ class WishlistViewModel extends ChangeNotifier {
   // Add a product to wishlist
   Future<bool> addToWishlist(Product product) async {
     try {
-      // TODO: Get current user ID from auth service
-      const currentUserId = 'current_user_id';
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
 
       // Check if already in wishlist
       if (_wishlistItems.any((item) => item.id == product.id)) {
@@ -64,7 +82,7 @@ class WishlistViewModel extends ChangeNotifier {
 
       await _firestore
           .collection(_collection)
-          .doc(currentUserId)
+          .doc(currentUser.uid)
           .collection('items')
           .doc(product.id)
           .set({
@@ -86,12 +104,14 @@ class WishlistViewModel extends ChangeNotifier {
   // Remove a product from wishlist
   Future<bool> removeFromWishlist(String productId) async {
     try {
-      // TODO: Get current user ID from auth service
-      const currentUserId = 'current_user_id';
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
 
       await _firestore
           .collection(_collection)
-          .doc(currentUserId)
+          .doc(currentUser.uid)
           .collection('items')
           .doc(productId)
           .delete();

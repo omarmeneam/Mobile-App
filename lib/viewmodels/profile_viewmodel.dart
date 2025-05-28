@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase;
 import '../models/user.dart';
 import '../services/storage_service.dart';
+import '../services/product_service.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfileViewModel extends ChangeNotifier {
   final StorageService _storageService = StorageService();
+  final ProductService _productService = ProductService();
   final firebase.FirebaseAuth _auth = firebase.FirebaseAuth.instance;
 
   User? _user;
@@ -150,14 +153,36 @@ class ProfileViewModel extends ChangeNotifier {
         }
       }
 
-      // Update other user information
+      // Update Firebase Auth display name
       await firebaseUser.updateDisplayName(_name);
+
+      // Update user document in Firestore
+      final userData = {
+        'name': _name,
+        'email': _email,
+        'avatar': avatarUrl,
+        'bio': _bio,
+        'phone': _phone,
+        'online': true,
+        'isEmailVerified': _user!.isEmailVerified,
+        'joinedDate': _user!.joinedDate,
+        'rating': _user!.rating,
+        'reviewCount': _user!.reviewCount,
+      };
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(firebaseUser.uid)
+          .update(userData);
 
       // Refresh user to get updated data
       await firebaseUser.reload();
 
       // Update local user object with new data
       _user = User.fromFirebaseUser(_auth.currentUser!);
+
+      // Update seller info in all their product listings
+      await _productService.updateSellerInfo(_user!.uid, userData);
 
       // Synchronize form data with updated user
       _name = _user!.name;

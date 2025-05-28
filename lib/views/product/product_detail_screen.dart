@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../theme/app_colors.dart';
 import '../../viewmodels/product_viewmodel.dart';
 import '../../viewmodels/wishlist_viewmodel.dart';
@@ -137,25 +139,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
         final product = productViewModel.product!;
         final isInWishlist = wishlistViewModel.isInWishlist(product.id);
+        final currentUser = FirebaseAuth.instance.currentUser;
+        final isSelfPosted =
+            currentUser != null && product.sellerId == currentUser.uid;
 
-        // Mock image list
-        final List<String> images = [
-          product.image,
-          product.image, // Using same image as placeholder for multiple views
-          product.image,
-        ];
+        // Use actual product images
+        final List<String> images = product.images;
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('Product Details'),
             actions: [
-              IconButton(
-                icon: Icon(
-                  isInWishlist ? Icons.favorite : Icons.favorite_border,
-                  color: isInWishlist ? AppColors.primary : null,
+              if (!isSelfPosted)
+                IconButton(
+                  icon: Icon(
+                    isInWishlist ? Icons.favorite : Icons.favorite_border,
+                    color: isInWishlist ? AppColors.primary : null,
+                  ),
+                  onPressed: _toggleWishlist,
                 ),
-                onPressed: _toggleWishlist,
-              ),
               IconButton(
                 icon: const Icon(Icons.share),
                 onPressed: _shareProduct,
@@ -177,7 +179,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       });
                     },
                     itemBuilder: (context, index) {
-                      return Image.asset(images[index], fit: BoxFit.cover);
+                      return Image.network(
+                        images[index],
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Image.network(
+                            'https://placehold.co/600x400/png?text=No+Image',
+                            fit: BoxFit.cover,
+                          );
+                        },
+                      );
                     },
                   ),
                 ),
@@ -272,9 +283,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   children: [
                                     CircleAvatar(
                                       radius: 24,
-                                      backgroundImage: AssetImage(
-                                        product.seller!.avatar,
-                                      ),
+                                      backgroundImage:
+                                          product.seller!.avatar.startsWith(
+                                                'http',
+                                              )
+                                              ? NetworkImage(
+                                                product.seller!.avatar,
+                                              )
+                                              : AssetImage(
+                                                    product.seller!.avatar,
+                                                  )
+                                                  as ImageProvider,
                                     ),
                                     const SizedBox(width: 16),
                                     Expanded(
@@ -286,12 +305,38 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
                                             children: [
-                                              Text(
-                                                product.seller!.name,
-                                                style:
-                                                    Theme.of(
-                                                      context,
-                                                    ).textTheme.titleMedium,
+                                              StreamBuilder<DocumentSnapshot>(
+                                                stream:
+                                                    FirebaseFirestore.instance
+                                                        .collection('users')
+                                                        .doc(product.sellerId)
+                                                        .snapshots(),
+                                                builder: (context, snapshot) {
+                                                  if (snapshot.hasData &&
+                                                      snapshot.data!.exists) {
+                                                    final userData =
+                                                        snapshot.data!.data()
+                                                            as Map<
+                                                              String,
+                                                              dynamic
+                                                            >;
+                                                    return Text(
+                                                      userData['name'] ??
+                                                          product.seller!.name,
+                                                      style:
+                                                          Theme.of(context)
+                                                              .textTheme
+                                                              .titleMedium,
+                                                    );
+                                                  }
+                                                  return Text(
+                                                    product.seller!.name,
+                                                    style:
+                                                        Theme.of(
+                                                          context,
+                                                        ).textTheme.titleMedium,
+                                                  );
+                                                },
                                               ),
                                               Row(
                                                 children: [
@@ -328,19 +373,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 const SizedBox(height: 16),
                                 Row(
                                   children: [
-                                    Expanded(
-                                      child: ElevatedButton.icon(
-                                        onPressed: () {
-                                          Navigator.pushNamed(
-                                            context,
-                                            '/messages/${product.seller!.uid}',
-                                          );
-                                        },
-                                        icon: const Icon(Icons.message),
-                                        label: const Text('Message Seller'),
+                                    if (!isSelfPosted)
+                                      Expanded(
+                                        child: ElevatedButton.icon(
+                                          onPressed: () {
+                                            Navigator.pushNamed(
+                                              context,
+                                              '/messages/${product.seller!.uid}',
+                                            );
+                                          },
+                                          icon: const Icon(Icons.message),
+                                          label: const Text('Message Seller'),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
+                                    if (!isSelfPosted) const SizedBox(width: 8),
                                     IconButton(
                                       onPressed: _reportListing,
                                       icon: const Icon(Icons.flag_outlined),
